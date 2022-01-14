@@ -52,6 +52,12 @@ module.exports = {
       backgroundSize: {
         "stripes-size": "7.07px 7.07px",
       },
+      keyframes: {
+        directRight: {
+          '0%, 100%': { transform: 'translateX(25%)' },
+          '50%': { transform: 'translateX(0)' },
+        }
+      },
     },
   },
   plugins: [require("@tailwindcss/forms")],

@@ -15,7 +15,7 @@
     <Route path="/products">
       <Products />
     </Route>
-    <PrivateRoute path="/" let:location>
+    <PrivateRoute path="/*" let:location>
       <Dashboard />
     </PrivateRoute>
     <PrivateRoute path="/profile" let:location>

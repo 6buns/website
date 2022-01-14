@@ -10,6 +10,9 @@ var app = (function () {
             tar[k] = src[k];
         return tar;
     }
+    function is_promise(value) {
+        return value && typeof value === 'object' && typeof value.then === 'function';
+    }
     function add_location(element, file, line, column, char) {
         element.__svelte_meta = {
             loc: { file, line, column, char }
@@ -131,6 +134,12 @@ var app = (function () {
     function detach(node) {
         node.parentNode.removeChild(node);
     }
+    function destroy_each(iterations, detaching) {
+        for (let i = 0; i < iterations.length; i += 1) {
+            if (iterations[i])
+                iterations[i].d(detaching);
+        }
+    }
     function element(name) {
         return document.createElement(name);
     }
@@ -155,6 +164,27 @@ var app = (function () {
             node.removeAttribute(attribute);
         else if (node.getAttribute(attribute) !== value)
             node.setAttribute(attribute, value);
+    }
+    function set_attributes(node, attributes) {
+        // @ts-ignore
+        const descriptors = Object.getOwnPropertyDescriptors(node.__proto__);
+        for (const key in attributes) {
+            if (attributes[key] == null) {
+                node.removeAttribute(key);
+            }
+            else if (key === 'style') {
+                node.style.cssText = attributes[key];
+            }
+            else if (key === '__value') {
+                node.value = node[key] = attributes[key];
+            }
+            else if (descriptors[key] && descriptors[key].set) {
+                node[key] = attributes[key];
+            }
+            else {
+                attr(node, key, attributes[key]);
+            }
+        }
     }
     function to_number(value) {
         return value === '' ? null : +value;
@@ -182,6 +212,9 @@ var app = (function () {
         const selected_option = select.querySelector(':checked') || select.options[0];
         return selected_option && selected_option.__value;
     }
+    function toggle_class(element, name, toggle) {
+        element.classList[toggle ? 'add' : 'remove'](name);
+    }
     function custom_event(type, detail, bubbles = false) {
         const e = document.createEvent('CustomEvent');
         e.initCustomEvent(type, bubbles, false, detail);
@@ -202,6 +235,20 @@ var app = (function () {
     }
     function onDestroy(fn) {
         get_current_component().$$.on_destroy.push(fn);
+    }
+    function createEventDispatcher() {
+        const component = get_current_component();
+        return (type, detail) => {
+            const callbacks = component.$$.callbacks[type];
+            if (callbacks) {
+                // TODO are there situations where events could be dispatched
+                // in a server (non-DOM) environment?
+                const event = custom_event(type, detail);
+                callbacks.slice().forEach(fn => {
+                    fn.call(component, event);
+                });
+            }
+        };
     }
     function setContext(key, context) {
         get_current_component().$$.context.set(key, context);
@@ -331,6 +378,88 @@ var app = (function () {
             });
             block.o(local);
         }
+    }
+
+    function handle_promise(promise, info) {
+        const token = info.token = {};
+        function update(type, index, key, value) {
+            if (info.token !== token)
+                return;
+            info.resolved = value;
+            let child_ctx = info.ctx;
+            if (key !== undefined) {
+                child_ctx = child_ctx.slice();
+                child_ctx[key] = value;
+            }
+            const block = type && (info.current = type)(child_ctx);
+            let needs_flush = false;
+            if (info.block) {
+                if (info.blocks) {
+                    info.blocks.forEach((block, i) => {
+                        if (i !== index && block) {
+                            group_outros();
+                            transition_out(block, 1, 1, () => {
+                                if (info.blocks[i] === block) {
+                                    info.blocks[i] = null;
+                                }
+                            });
+                            check_outros();
+                        }
+                    });
+                }
+                else {
+                    info.block.d(1);
+                }
+                block.c();
+                transition_in(block, 1);
+                block.m(info.mount(), info.anchor);
+                needs_flush = true;
+            }
+            info.block = block;
+            if (info.blocks)
+                info.blocks[index] = block;
+            if (needs_flush) {
+                flush();
+            }
+        }
+        if (is_promise(promise)) {
+            const current_component = get_current_component();
+            promise.then(value => {
+                set_current_component(current_component);
+                update(info.then, 1, info.value, value);
+                set_current_component(null);
+            }, error => {
+                set_current_component(current_component);
+                update(info.catch, 2, info.error, error);
+                set_current_component(null);
+                if (!info.hasCatch) {
+                    throw error;
+                }
+            });
+            // if we previously had a then/catch block, destroy it
+            if (info.current !== info.pending) {
+                update(info.pending, 0);
+                return true;
+            }
+        }
+        else {
+            if (info.current !== info.then) {
+                update(info.then, 1, info.value, promise);
+                return true;
+            }
+            info.resolved = promise;
+        }
+    }
+    function update_await_block_branch(info, ctx, dirty) {
+        const child_ctx = ctx.slice();
+        const { resolved } = info;
+        if (info.current === info.then) {
+            child_ctx[info.value] = resolved;
+        }
+        if (info.current === info.catch) {
+            child_ctx[info.error] = resolved;
+        }
+        info.block.p(child_ctx, dirty);
     }
 
     const globals = (typeof window !== 'undefined'
@@ -546,6 +675,15 @@ var app = (function () {
         dispatch_dev('SvelteDOMSetData', { node: text, data });
         text.data = data;
     }
+    function validate_each_argument(arg) {
+        if (typeof arg !== 'string' && !(arg && typeof arg === 'object' && 'length' in arg)) {
+            let msg = '{#each} only iterates over array-like objects.';
+            if (typeof Symbol === 'function' && arg && Symbol.iterator in arg) {
+                msg += ' You can use a spread to convert this iterable into an array.';
+            }
+            throw new Error(msg);
+        }
+    }
     function validate_slots(name, slot, keys) {
         for (const slot_key of Object.keys(slot)) {
             if (!~keys.indexOf(slot_key)) {
@@ -584,6 +722,18 @@ var app = (function () {
     const isFunction = value => typeof value === "function";
 
     const isNumber = value => typeof value === "number";
+
+    /**
+     * Decides whether a given `event` should result in a navigation or not.
+     * @param {object} event
+     */
+    function shouldNavigate(event) {
+    	return (
+    		!event.defaultPrevented &&
+    		event.button === 0 &&
+    		!(event.metaKey || event.altKey || event.ctrlKey || event.shiftKey)
+    	);
+    }
 
     function createCounter() {
     	let i = 0;
@@ -1535,10 +1685,10 @@ var app = (function () {
 
     /* node_modules/svelte-navigator/src/Router.svelte generated by Svelte v3.45.0 */
 
-    const file$b = "node_modules/svelte-navigator/src/Router.svelte";
+    const file$f = "node_modules/svelte-navigator/src/Router.svelte";
 
     // (195:0) {#if isTopLevelRouter && manageFocus && a11yConfig.announcements}
-    function create_if_block$4(ctx) {
+    function create_if_block$5(ctx) {
     	let div;
     	let t;
 
@@ -1550,7 +1700,7 @@ var app = (function () {
     			attr_dev(div, "aria-atomic", "true");
     			attr_dev(div, "aria-live", "polite");
     			attr_dev(div, "style", visuallyHiddenStyle);
-    			add_location(div, file$b, 195, 1, 5906);
+    			add_location(div, file$f, 195, 1, 5906);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -1566,7 +1716,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$4.name,
+    		id: create_if_block$5.name,
     		type: "if",
     		source: "(195:0) {#if isTopLevelRouter && manageFocus && a11yConfig.announcements}",
     		ctx
@@ -1575,7 +1725,7 @@ var app = (function () {
     	return block;
     }
 
-    function create_fragment$c(ctx) {
+    function create_fragment$g(ctx) {
     	let div;
     	let t0;
     	let t1;
@@ -1583,7 +1733,7 @@ var app = (function () {
     	let current;
     	const default_slot_template = /*#slots*/ ctx[20].default;
     	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[19], null);
-    	let if_block = /*isTopLevelRouter*/ ctx[2] && /*manageFocus*/ ctx[4] && /*a11yConfig*/ ctx[1].announcements && create_if_block$4(ctx);
+    	let if_block = /*isTopLevelRouter*/ ctx[2] && /*manageFocus*/ ctx[4] && /*a11yConfig*/ ctx[1].announcements && create_if_block$5(ctx);
 
     	const block = {
     		c: function create() {
@@ -1596,7 +1746,7 @@ var app = (function () {
     			set_style(div, "display", "none");
     			attr_dev(div, "aria-hidden", "true");
     			attr_dev(div, "data-svnav-router", /*routerId*/ ctx[3]);
-    			add_location(div, file$b, 190, 0, 5750);
+    			add_location(div, file$f, 190, 0, 5750);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -1653,7 +1803,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$c.name,
+    		id: create_fragment$g.name,
     		type: "component",
     		source: "",
     		ctx
@@ -1665,7 +1815,7 @@ var app = (function () {
     const createId$1 = createCounter();
     const defaultBasepath = "/";
 
-    function instance$c($$self, $$props, $$invalidate) {
+    function instance$g($$self, $$props, $$invalidate) {
     	let $location;
     	let $activeRoute;
     	let $prevLocation;
@@ -1956,8 +2106,8 @@ var app = (function () {
     		init(
     			this,
     			options,
-    			instance$c,
-    			create_fragment$c,
+    			instance$g,
+    			create_fragment$g,
     			safe_not_equal,
     			{
     				basepath: 10,
@@ -1974,7 +2124,7 @@ var app = (function () {
     			component: this,
     			tagName: "Router",
     			options,
-    			id: create_fragment$c.name
+    			id: create_fragment$g.name
     		});
     	}
 
@@ -2237,7 +2387,7 @@ var app = (function () {
     }
 
     /* node_modules/svelte-navigator/src/Route.svelte generated by Svelte v3.45.0 */
-    const file$a = "node_modules/svelte-navigator/src/Route.svelte";
+    const file$e = "node_modules/svelte-navigator/src/Route.svelte";
 
     const get_default_slot_changes$1 = dirty => ({
     	params: dirty & /*$params*/ 16,
@@ -2251,14 +2401,14 @@ var app = (function () {
     });
 
     // (97:0) {#if isActive}
-    function create_if_block$3(ctx) {
+    function create_if_block$4(ctx) {
     	let router;
     	let current;
 
     	router = new Router$1({
     			props: {
     				primary: /*primary*/ ctx[1],
-    				$$slots: { default: [create_default_slot$2] },
+    				$$slots: { default: [create_default_slot$4] },
     				$$scope: { ctx }
     			},
     			$$inline: true
@@ -2298,7 +2448,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$3.name,
+    		id: create_if_block$4.name,
     		type: "if",
     		source: "(97:0) {#if isActive}",
     		ctx
@@ -2308,7 +2458,7 @@ var app = (function () {
     }
 
     // (113:2) {:else}
-    function create_else_block$3(ctx) {
+    function create_else_block$4(ctx) {
     	let current;
     	const default_slot_template = /*#slots*/ ctx[17].default;
     	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[18], get_default_slot_context$1);
@@ -2356,7 +2506,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_else_block$3.name,
+    		id: create_else_block$4.name,
     		type: "else",
     		source: "(113:2) {:else}",
     		ctx
@@ -2366,7 +2516,7 @@ var app = (function () {
     }
 
     // (105:2) {#if component !== null}
-    function create_if_block_1$2(ctx) {
+    function create_if_block_1$3(ctx) {
     	let switch_instance;
     	let switch_instance_anchor;
     	let current;
@@ -2461,7 +2611,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block_1$2.name,
+    		id: create_if_block_1$3.name,
     		type: "if",
     		source: "(105:2) {#if component !== null}",
     		ctx
@@ -2471,12 +2621,12 @@ var app = (function () {
     }
 
     // (98:1) <Router {primary}>
-    function create_default_slot$2(ctx) {
+    function create_default_slot$4(ctx) {
     	let current_block_type_index;
     	let if_block;
     	let if_block_anchor;
     	let current;
-    	const if_block_creators = [create_if_block_1$2, create_else_block$3];
+    	const if_block_creators = [create_if_block_1$3, create_else_block$4];
     	const if_blocks = [];
 
     	function select_block_type(ctx, dirty) {
@@ -2541,7 +2691,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot$2.name,
+    		id: create_default_slot$4.name,
     		type: "slot",
     		source: "(98:1) <Router {primary}>",
     		ctx
@@ -2550,13 +2700,13 @@ var app = (function () {
     	return block;
     }
 
-    function create_fragment$b(ctx) {
+    function create_fragment$f(ctx) {
     	let div0;
     	let t0;
     	let t1;
     	let div1;
     	let current;
-    	let if_block = /*isActive*/ ctx[2] && create_if_block$3(ctx);
+    	let if_block = /*isActive*/ ctx[2] && create_if_block$4(ctx);
 
     	const block = {
     		c: function create() {
@@ -2568,11 +2718,11 @@ var app = (function () {
     			set_style(div0, "display", "none");
     			attr_dev(div0, "aria-hidden", "true");
     			attr_dev(div0, "data-svnav-route-start", /*id*/ ctx[5]);
-    			add_location(div0, file$a, 95, 0, 2622);
+    			add_location(div0, file$e, 95, 0, 2622);
     			set_style(div1, "display", "none");
     			attr_dev(div1, "aria-hidden", "true");
     			attr_dev(div1, "data-svnav-route-end", /*id*/ ctx[5]);
-    			add_location(div1, file$a, 121, 0, 3295);
+    			add_location(div1, file$e, 121, 0, 3295);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -2594,7 +2744,7 @@ var app = (function () {
     						transition_in(if_block, 1);
     					}
     				} else {
-    					if_block = create_if_block$3(ctx);
+    					if_block = create_if_block$4(ctx);
     					if_block.c();
     					transition_in(if_block, 1);
     					if_block.m(t1.parentNode, t1);
@@ -2629,7 +2779,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$b.name,
+    		id: create_fragment$f.name,
     		type: "component",
     		source: "",
     		ctx
@@ -2640,7 +2790,7 @@ var app = (function () {
 
     const createId = createCounter();
 
-    function instance$b($$self, $$props, $$invalidate) {
+    function instance$f($$self, $$props, $$invalidate) {
     	let isActive;
     	const omit_props_names = ["path","component","meta","primary"];
     	let $$restProps = compute_rest_props($$props, omit_props_names);
@@ -2828,7 +2978,7 @@ var app = (function () {
     	constructor(options) {
     		super(options);
 
-    		init(this, options, instance$b, create_fragment$b, safe_not_equal, {
+    		init(this, options, instance$f, create_fragment$f, safe_not_equal, {
     			path: 12,
     			component: 0,
     			meta: 13,
@@ -2839,7 +2989,7 @@ var app = (function () {
     			component: this,
     			tagName: "Route",
     			options,
-    			id: create_fragment$b.name
+    			id: create_fragment$f.name
     		});
     	}
 
@@ -2877,6 +3027,299 @@ var app = (function () {
     }
 
     var Route$1 = Route;
+
+    /* node_modules/svelte-navigator/src/Link.svelte generated by Svelte v3.45.0 */
+    const file$d = "node_modules/svelte-navigator/src/Link.svelte";
+
+    function create_fragment$e(ctx) {
+    	let a;
+    	let current;
+    	let mounted;
+    	let dispose;
+    	const default_slot_template = /*#slots*/ ctx[13].default;
+    	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[12], null);
+    	let a_levels = [{ href: /*href*/ ctx[0] }, /*ariaCurrent*/ ctx[2], /*props*/ ctx[1]];
+    	let a_data = {};
+
+    	for (let i = 0; i < a_levels.length; i += 1) {
+    		a_data = assign(a_data, a_levels[i]);
+    	}
+
+    	const block = {
+    		c: function create() {
+    			a = element("a");
+    			if (default_slot) default_slot.c();
+    			set_attributes(a, a_data);
+    			add_location(a, file$d, 63, 0, 1735);
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, a, anchor);
+
+    			if (default_slot) {
+    				default_slot.m(a, null);
+    			}
+
+    			current = true;
+
+    			if (!mounted) {
+    				dispose = listen_dev(a, "click", /*onClick*/ ctx[4], false, false, false);
+    				mounted = true;
+    			}
+    		},
+    		p: function update(ctx, [dirty]) {
+    			if (default_slot) {
+    				if (default_slot.p && (!current || dirty & /*$$scope*/ 4096)) {
+    					update_slot_base(
+    						default_slot,
+    						default_slot_template,
+    						ctx,
+    						/*$$scope*/ ctx[12],
+    						!current
+    						? get_all_dirty_from_scope(/*$$scope*/ ctx[12])
+    						: get_slot_changes(default_slot_template, /*$$scope*/ ctx[12], dirty, null),
+    						null
+    					);
+    				}
+    			}
+
+    			set_attributes(a, a_data = get_spread_update(a_levels, [
+    				(!current || dirty & /*href*/ 1) && { href: /*href*/ ctx[0] },
+    				dirty & /*ariaCurrent*/ 4 && /*ariaCurrent*/ ctx[2],
+    				dirty & /*props*/ 2 && /*props*/ ctx[1]
+    			]));
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(default_slot, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(default_slot, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(a);
+    			if (default_slot) default_slot.d(detaching);
+    			mounted = false;
+    			dispose();
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_fragment$e.name,
+    		type: "component",
+    		source: "",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function instance$e($$self, $$props, $$invalidate) {
+    	let href;
+    	let isPartiallyCurrent;
+    	let isCurrent;
+    	let ariaCurrent;
+    	let props;
+    	const omit_props_names = ["to","replace","state","getProps"];
+    	let $$restProps = compute_rest_props($$props, omit_props_names);
+    	let $location;
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots('Link', slots, ['default']);
+    	let { to } = $$props;
+    	let { replace = false } = $$props;
+    	let { state = {} } = $$props;
+    	let { getProps = null } = $$props;
+    	usePreflightCheck(LINK_ID, $$props);
+    	const location = useLocation();
+    	validate_store(location, 'location');
+    	component_subscribe($$self, location, value => $$invalidate(11, $location = value));
+    	const dispatch = createEventDispatcher();
+    	const resolve = useResolve();
+    	const { navigate } = useHistory();
+
+    	function onClick(event) {
+    		dispatch("click", event);
+
+    		if (shouldNavigate(event)) {
+    			event.preventDefault();
+
+    			// Don't push another entry to the history stack when the user
+    			// clicks on a Link to the page they are currently on.
+    			const shouldReplace = isCurrent || replace;
+
+    			navigate(href, { state, replace: shouldReplace });
+    		}
+    	}
+
+    	$$self.$$set = $$new_props => {
+    		$$invalidate(18, $$props = assign(assign({}, $$props), exclude_internal_props($$new_props)));
+    		$$invalidate(17, $$restProps = compute_rest_props($$props, omit_props_names));
+    		if ('to' in $$new_props) $$invalidate(5, to = $$new_props.to);
+    		if ('replace' in $$new_props) $$invalidate(6, replace = $$new_props.replace);
+    		if ('state' in $$new_props) $$invalidate(7, state = $$new_props.state);
+    		if ('getProps' in $$new_props) $$invalidate(8, getProps = $$new_props.getProps);
+    		if ('$$scope' in $$new_props) $$invalidate(12, $$scope = $$new_props.$$scope);
+    	};
+
+    	$$self.$capture_state = () => ({
+    		createEventDispatcher,
+    		useLocation,
+    		useResolve,
+    		useHistory,
+    		usePreflightCheck,
+    		shouldNavigate,
+    		isFunction,
+    		startsWith,
+    		LINK_ID,
+    		to,
+    		replace,
+    		state,
+    		getProps,
+    		location,
+    		dispatch,
+    		resolve,
+    		navigate,
+    		onClick,
+    		href,
+    		isCurrent,
+    		isPartiallyCurrent,
+    		props,
+    		ariaCurrent,
+    		$location
+    	});
+
+    	$$self.$inject_state = $$new_props => {
+    		$$invalidate(18, $$props = assign(assign({}, $$props), $$new_props));
+    		if ('to' in $$props) $$invalidate(5, to = $$new_props.to);
+    		if ('replace' in $$props) $$invalidate(6, replace = $$new_props.replace);
+    		if ('state' in $$props) $$invalidate(7, state = $$new_props.state);
+    		if ('getProps' in $$props) $$invalidate(8, getProps = $$new_props.getProps);
+    		if ('href' in $$props) $$invalidate(0, href = $$new_props.href);
+    		if ('isCurrent' in $$props) $$invalidate(9, isCurrent = $$new_props.isCurrent);
+    		if ('isPartiallyCurrent' in $$props) $$invalidate(10, isPartiallyCurrent = $$new_props.isPartiallyCurrent);
+    		if ('props' in $$props) $$invalidate(1, props = $$new_props.props);
+    		if ('ariaCurrent' in $$props) $$invalidate(2, ariaCurrent = $$new_props.ariaCurrent);
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	$$self.$$.update = () => {
+    		if ($$self.$$.dirty & /*to, $location*/ 2080) {
+    			// We need to pass location here to force re-resolution of the link,
+    			// when the pathname changes. Otherwise we could end up with stale path params,
+    			// when for example an :id changes in the parent Routes path
+    			$$invalidate(0, href = resolve(to, $location));
+    		}
+
+    		if ($$self.$$.dirty & /*$location, href*/ 2049) {
+    			$$invalidate(10, isPartiallyCurrent = startsWith($location.pathname, href));
+    		}
+
+    		if ($$self.$$.dirty & /*href, $location*/ 2049) {
+    			$$invalidate(9, isCurrent = href === $location.pathname);
+    		}
+
+    		if ($$self.$$.dirty & /*isCurrent*/ 512) {
+    			$$invalidate(2, ariaCurrent = isCurrent ? { "aria-current": "page" } : {});
+    		}
+
+    		$$invalidate(1, props = (() => {
+    			if (isFunction(getProps)) {
+    				const dynamicProps = getProps({
+    					location: $location,
+    					href,
+    					isPartiallyCurrent,
+    					isCurrent
+    				});
+
+    				return { ...$$restProps, ...dynamicProps };
+    			}
+
+    			return $$restProps;
+    		})());
+    	};
+
+    	$$props = exclude_internal_props($$props);
+
+    	return [
+    		href,
+    		props,
+    		ariaCurrent,
+    		location,
+    		onClick,
+    		to,
+    		replace,
+    		state,
+    		getProps,
+    		isCurrent,
+    		isPartiallyCurrent,
+    		$location,
+    		$$scope,
+    		slots
+    	];
+    }
+
+    class Link extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+    		init(this, options, instance$e, create_fragment$e, safe_not_equal, { to: 5, replace: 6, state: 7, getProps: 8 });
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "Link",
+    			options,
+    			id: create_fragment$e.name
+    		});
+
+    		const { ctx } = this.$$;
+    		const props = options.props || {};
+
+    		if (/*to*/ ctx[5] === undefined && !('to' in props)) {
+    			console.warn("<Link> was created without expected prop 'to'");
+    		}
+    	}
+
+    	get to() {
+    		throw new Error("<Link>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set to(value) {
+    		throw new Error("<Link>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get replace() {
+    		throw new Error("<Link>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set replace(value) {
+    		throw new Error("<Link>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get state() {
+    		throw new Error("<Link>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set state(value) {
+    		throw new Error("<Link>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get getProps() {
+    		throw new Error("<Link>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set getProps(value) {
+    		throw new Error("<Link>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+    }
+
+    var Link$1 = Link;
 
     const user = writable({});
 
@@ -3512,10 +3955,15 @@ var app = (function () {
     // Based on code from:
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error#Custom_Error_Types
     class FirebaseError extends Error {
-        constructor(code, message, customData) {
+        constructor(
+        /** The error code for this error. */
+        code, message, 
+        /** Custom data for this error. */
+        customData) {
             super(message);
             this.code = code;
             this.customData = customData;
+            /** The custom name for all FirebaseErrors. */
             this.name = ERROR_NAME;
             // Fix For ES5
             // https://github.com/Microsoft/TypeScript-wiki/blob/master/Breaking-Changes.md#extending-built-ins-like-error-array-and-map-may-no-longer-work
@@ -4959,7 +5407,7 @@ var app = (function () {
     }
 
     const name$o = "@firebase/app";
-    const version$1$1 = "0.7.11";
+    const version$1$1 = "0.7.12";
 
     /**
      * @license
@@ -5026,7 +5474,7 @@ var app = (function () {
     const name$1$1 = "@firebase/firestore-compat";
 
     const name$p = "firebase";
-    const version$3 = "9.6.1";
+    const version$3 = "9.6.2";
 
     /**
      * @license
@@ -5408,7 +5856,7 @@ var app = (function () {
     registerCoreComponents('');
 
     var name$2 = "firebase";
-    var version$2 = "9.6.1";
+    var version$2 = "9.6.2";
 
     /**
      * @license
@@ -10715,7 +11163,7 @@ var app = (function () {
     const browserPopupRedirectResolver = BrowserPopupRedirectResolver;
 
     var name$1 = "@firebase/auth";
-    var version$1 = "0.19.4";
+    var version$1 = "0.19.5";
 
     /**
      * @license
@@ -10905,7 +11353,7 @@ var app = (function () {
     registerAuth("Browser" /* BROWSER */);
 
     const name = "@firebase/database";
-    const version = "0.12.4";
+    const version = "0.12.5";
 
     /**
      * @license
@@ -23086,7 +23534,7 @@ var app = (function () {
     /* src/Components/Menu.svelte generated by Svelte v3.45.0 */
 
     const { console: console_1$1 } = globals;
-    const file$9 = "src/Components/Menu.svelte";
+    const file$c = "src/Components/Menu.svelte";
 
     // (30:8) {:else}
     function create_else_block_3(ctx) {
@@ -23106,13 +23554,13 @@ var app = (function () {
     			a1 = element("a");
     			a1.textContent = "pricing";
     			attr_dev(a0, "href", "/products");
-    			add_location(a0, file$9, 31, 12, 1072);
+    			add_location(a0, file$c, 31, 12, 1072);
     			attr_dev(li0, "class", "btn btn-plain");
-    			add_location(li0, file$9, 30, 10, 1033);
+    			add_location(li0, file$c, 30, 10, 1033);
     			attr_dev(a1, "href", "/pricing");
-    			add_location(a1, file$9, 34, 12, 1170);
+    			add_location(a1, file$c, 34, 12, 1170);
     			attr_dev(li1, "class", "btn btn-plain");
-    			add_location(li1, file$9, 33, 10, 1131);
+    			add_location(li1, file$c, 33, 10, 1131);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, li0, anchor);
@@ -23157,13 +23605,13 @@ var app = (function () {
     			a1 = element("a");
     			a1.textContent = "Profile";
     			attr_dev(a0, "href", "/");
-    			add_location(a0, file$9, 24, 12, 865);
+    			add_location(a0, file$c, 24, 12, 865);
     			attr_dev(li0, "class", "btn btn-plain");
-    			add_location(li0, file$9, 23, 10, 826);
+    			add_location(li0, file$c, 23, 10, 826);
     			attr_dev(a1, "href", "/profile");
-    			add_location(a1, file$9, 27, 12, 958);
+    			add_location(a1, file$c, 27, 12, 958);
     			attr_dev(li1, "class", "btn btn-plain");
-    			add_location(li1, file$9, 26, 10, 919);
+    			add_location(li1, file$c, 26, 10, 919);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, li0, anchor);
@@ -23203,9 +23651,9 @@ var app = (function () {
     			li = element("li");
     			li.textContent = "Logout";
     			attr_dev(li, "class", "btn btn-outlined");
-    			add_location(li, file$9, 47, 10, 1638);
+    			add_location(li, file$c, 47, 10, 1638);
     			attr_dev(ul, "class", "flex flex-row items-center justify-evenly space-x-6 capitalize cursor-pointer");
-    			add_location(ul, file$9, 45, 8, 1526);
+    			add_location(ul, file$c, 45, 8, 1526);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, ul, anchor);
@@ -23253,11 +23701,11 @@ var app = (function () {
     			li1 = element("li");
     			li1.textContent = "Signup";
     			attr_dev(li0, "class", "btn btn-outlined");
-    			add_location(li0, file$9, 41, 10, 1385);
+    			add_location(li0, file$c, 41, 10, 1385);
     			attr_dev(li1, "class", "btn btn-green");
-    			add_location(li1, file$9, 42, 10, 1452);
+    			add_location(li1, file$c, 42, 10, 1452);
     			attr_dev(ul, "class", "flex flex-row items-center justify-evenly space-x-6 capitalize cursor-pointer");
-    			add_location(ul, file$9, 39, 8, 1274);
+    			add_location(ul, file$c, 39, 8, 1274);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, ul, anchor);
@@ -23290,13 +23738,13 @@ var app = (function () {
     }
 
     // (67:2) {#if open}
-    function create_if_block$2(ctx) {
+    function create_if_block$3(ctx) {
     	let div;
     	let ul;
     	let t;
 
     	function select_block_type_2(ctx, dirty) {
-    		if (/*$user*/ ctx[1].uid) return create_if_block_2$1;
+    		if (/*$user*/ ctx[1].uid) return create_if_block_2$2;
     		return create_else_block_1;
     	}
 
@@ -23304,8 +23752,8 @@ var app = (function () {
     	let if_block0 = current_block_type(ctx);
 
     	function select_block_type_3(ctx, dirty) {
-    		if (!/*$user*/ ctx[1].uid) return create_if_block_1$1;
-    		return create_else_block$2;
+    		if (!/*$user*/ ctx[1].uid) return create_if_block_1$2;
+    		return create_else_block$3;
     	}
 
     	let current_block_type_1 = select_block_type_3(ctx);
@@ -23319,9 +23767,9 @@ var app = (function () {
     			t = space();
     			if_block1.c();
     			attr_dev(ul, "class", "w-full p-4 flex flex-col items-center justify-evenly space-y-4");
-    			add_location(ul, file$9, 69, 6, 2505);
+    			add_location(ul, file$c, 69, 6, 2505);
     			attr_dev(div, "class", "text-2xl text-stone-200 z-20 p-4 flex flex-col items-center justify-evenly");
-    			add_location(div, file$9, 67, 4, 2404);
+    			add_location(div, file$c, 67, 4, 2404);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -23362,7 +23810,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$2.name,
+    		id: create_if_block$3.name,
     		type: "if",
     		source: "(67:2) {#if open}",
     		ctx
@@ -23389,13 +23837,13 @@ var app = (function () {
     			a1 = element("a");
     			a1.textContent = "pricing";
     			attr_dev(a0, "href", "/products");
-    			add_location(a0, file$9, 80, 12, 2878);
+    			add_location(a0, file$c, 80, 12, 2878);
     			attr_dev(li0, "class", "btn btn-plain");
-    			add_location(li0, file$9, 79, 10, 2839);
+    			add_location(li0, file$c, 79, 10, 2839);
     			attr_dev(a1, "href", "/pricing");
-    			add_location(a1, file$9, 83, 12, 2976);
+    			add_location(a1, file$c, 83, 12, 2976);
     			attr_dev(li1, "class", "btn btn-plain");
-    			add_location(li1, file$9, 82, 10, 2937);
+    			add_location(li1, file$c, 82, 10, 2937);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, li0, anchor);
@@ -23423,7 +23871,7 @@ var app = (function () {
     }
 
     // (72:8) {#if $user.uid}
-    function create_if_block_2$1(ctx) {
+    function create_if_block_2$2(ctx) {
     	let li0;
     	let a0;
     	let t1;
@@ -23440,13 +23888,13 @@ var app = (function () {
     			a1 = element("a");
     			a1.textContent = "Profile";
     			attr_dev(a0, "href", "/dashboard");
-    			add_location(a0, file$9, 73, 12, 2662);
+    			add_location(a0, file$c, 73, 12, 2662);
     			attr_dev(li0, "class", "btn btn-plain");
-    			add_location(li0, file$9, 72, 10, 2623);
+    			add_location(li0, file$c, 72, 10, 2623);
     			attr_dev(a1, "href", "/profile");
-    			add_location(a1, file$9, 76, 12, 2764);
+    			add_location(a1, file$c, 76, 12, 2764);
     			attr_dev(li1, "class", "btn btn-plain");
-    			add_location(li1, file$9, 75, 10, 2725);
+    			add_location(li1, file$c, 75, 10, 2725);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, li0, anchor);
@@ -23464,7 +23912,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block_2$1.name,
+    		id: create_if_block_2$2.name,
     		type: "if",
     		source: "(72:8) {#if $user.uid}",
     		ctx
@@ -23474,7 +23922,7 @@ var app = (function () {
     }
 
     // (94:6) {:else}
-    function create_else_block$2(ctx) {
+    function create_else_block$3(ctx) {
     	let ul;
     	let li;
     	let mounted;
@@ -23486,9 +23934,9 @@ var app = (function () {
     			li = element("li");
     			li.textContent = "Logout";
     			attr_dev(li, "class", "btn btn-outlined");
-    			add_location(li, file$9, 96, 10, 3423);
+    			add_location(li, file$c, 96, 10, 3423);
     			attr_dev(ul, "class", "mt-8 w-full p-4 flex flex-row items-center justify-evenly space-x-8");
-    			add_location(ul, file$9, 94, 8, 3322);
+    			add_location(ul, file$c, 94, 8, 3322);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, ul, anchor);
@@ -23509,7 +23957,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_else_block$2.name,
+    		id: create_else_block$3.name,
     		type: "else",
     		source: "(94:6) {:else}",
     		ctx
@@ -23519,7 +23967,7 @@ var app = (function () {
     }
 
     // (88:6) {#if !$user.uid}
-    function create_if_block_1$1(ctx) {
+    function create_if_block_1$2(ctx) {
     	let ul;
     	let li0;
     	let t1;
@@ -23536,11 +23984,11 @@ var app = (function () {
     			li1 = element("li");
     			li1.textContent = "Signup";
     			attr_dev(li0, "class", "btn btn-outlined");
-    			add_location(li0, file$9, 90, 10, 3181);
+    			add_location(li0, file$c, 90, 10, 3181);
     			attr_dev(li1, "class", "btn btn-green");
-    			add_location(li1, file$9, 91, 10, 3248);
+    			add_location(li1, file$c, 91, 10, 3248);
     			attr_dev(ul, "class", "mt-8 w-full p-4 flex flex-row items-center justify-evenly space-x-8");
-    			add_location(ul, file$9, 88, 8, 3080);
+    			add_location(ul, file$c, 88, 8, 3080);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, ul, anchor);
@@ -23563,7 +24011,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block_1$1.name,
+    		id: create_if_block_1$2.name,
     		type: "if",
     		source: "(88:6) {#if !$user.uid}",
     		ctx
@@ -23572,7 +24020,7 @@ var app = (function () {
     	return block;
     }
 
-    function create_fragment$a(ctx) {
+    function create_fragment$d(ctx) {
     	let nav;
     	let div2;
     	let a;
@@ -23606,7 +24054,7 @@ var app = (function () {
 
     	let current_block_type_1 = select_block_type_1(ctx);
     	let if_block1 = current_block_type_1(ctx);
-    	let if_block2 = /*open*/ ctx[0] && create_if_block$2(ctx);
+    	let if_block2 = /*open*/ ctx[0] && create_if_block$3(ctx);
 
     	const block = {
     		c: function create() {
@@ -23628,14 +24076,14 @@ var app = (function () {
     			if (if_block2) if_block2.c();
     			if (!src_url_equal(img.src, img_src_value = "./favicon-32x32.png")) attr_dev(img, "src", img_src_value);
     			attr_dev(img, "alt", "site icon");
-    			add_location(img, file$9, 16, 6, 529);
+    			add_location(img, file$c, 16, 6, 529);
     			attr_dev(a, "href", "/");
     			attr_dev(a, "class", "flex-grow-0 flex flex-row items-center justify-center space-x-2 px-4 py-2");
-    			add_location(a, file$9, 13, 4, 416);
+    			add_location(a, file$c, 13, 4, 416);
     			attr_dev(ul, "class", "flex flex-row items-center justify-evenly capitalize lg:space-x-2 md:space-x-0");
-    			add_location(ul, file$9, 20, 6, 691);
+    			add_location(ul, file$c, 20, 6, 691);
     			attr_dev(div0, "class", "md:w-full md:flex flex-row flex-grow justify-between items-center hidden");
-    			add_location(div0, file$9, 18, 4, 592);
+    			add_location(div0, file$c, 18, 4, 592);
     			attr_dev(path, "fillrule", "evenodd");
 
     			attr_dev(path, "d", path_d_value = !/*open*/ ctx[0]
@@ -23643,18 +24091,18 @@ var app = (function () {
     			: "M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z");
 
     			attr_dev(path, "cliprule", "evenodd");
-    			add_location(path, file$9, 57, 8, 1944);
+    			add_location(path, file$c, 57, 8, 1944);
     			attr_dev(svg, "xmlns", "http://www.w3.org/2000/svg");
     			attr_dev(svg, "class", "h-8 w-8");
     			attr_dev(svg, "viewBox", "0 0 20 20");
     			attr_dev(svg, "fill", "currentColor");
-    			add_location(svg, file$9, 52, 6, 1807);
+    			add_location(svg, file$c, 52, 6, 1807);
     			attr_dev(div1, "class", "text-stone-500 md:hidden z-30");
-    			add_location(div1, file$9, 51, 4, 1738);
+    			add_location(div1, file$c, 51, 4, 1738);
     			attr_dev(div2, "class", "flex flex-row items-center justify-between md:justify-start");
-    			add_location(div2, file$9, 12, 2, 338);
+    			add_location(div2, file$c, 12, 2, 338);
     			attr_dev(nav, "class", "fixed inset-x-0 top-0 z-20 shadow w-full py-4 px-2 xl:px-16 bg-stone-50");
-    			add_location(nav, file$9, 10, 0, 248);
+    			add_location(nav, file$c, 10, 0, 248);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -23715,7 +24163,7 @@ var app = (function () {
     				if (if_block2) {
     					if_block2.p(ctx, dirty);
     				} else {
-    					if_block2 = create_if_block$2(ctx);
+    					if_block2 = create_if_block$3(ctx);
     					if_block2.c();
     					if_block2.m(nav, null);
     				}
@@ -23738,7 +24186,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$a.name,
+    		id: create_fragment$d.name,
     		type: "component",
     		source: "",
     		ctx
@@ -23747,7 +24195,7 @@ var app = (function () {
     	return block;
     }
 
-    function instance$a($$self, $$props, $$invalidate) {
+    function instance$d($$self, $$props, $$invalidate) {
     	let $user;
     	validate_store(user, 'user');
     	component_subscribe($$self, user, $$value => $$invalidate(1, $user = $$value));
@@ -23786,21 +24234,21 @@ var app = (function () {
     class Menu extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$a, create_fragment$a, safe_not_equal, {});
+    		init(this, options, instance$d, create_fragment$d, safe_not_equal, {});
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "Menu",
     			options,
-    			id: create_fragment$a.name
+    			id: create_fragment$d.name
     		});
     	}
     }
 
     /* src/pages/Home.svelte generated by Svelte v3.45.0 */
-    const file$8 = "src/pages/Home.svelte";
+    const file$b = "src/pages/Home.svelte";
 
-    function create_fragment$9(ctx) {
+    function create_fragment$c(ctx) {
     	let main;
     	let menu;
     	let t0;
@@ -24193,304 +24641,304 @@ var app = (function () {
     			div43 = element("div");
     			div43.textContent = "Leave";
     			attr_dev(span0, "class", "block xl:inline");
-    			add_location(span0, file$8, 13, 10, 601);
+    			add_location(span0, file$b, 13, 10, 601);
     			attr_dev(span1, "class", "block text-lime-500 xl:inline");
-    			add_location(span1, file$8, 14, 10, 682);
+    			add_location(span1, file$b, 14, 10, 682);
     			attr_dev(h10, "class", "text-4xl sm:text-5xl md:text-6xl tracking-tight leading-tight font-serif font-extrabold text-gray-900 ring-0");
-    			add_location(h10, file$8, 11, 8, 459);
+    			add_location(h10, file$b, 11, 8, 459);
     			attr_dev(p, "class", "mt-3 text-base text-stone-500 sm:mt-5 sm:text-lg sm:max-w-xl sm:mx-auto md:mt-5 md:text-xl lg:mx-0");
-    			add_location(p, file$8, 16, 8, 773);
+    			add_location(p, file$b, 16, 8, 773);
     			attr_dev(a0, "href", "/");
     			attr_dev(a0, "class", "w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-lime-600 hover:bg-lime-700 md:py-4 md:text-lg md:px-10");
-    			add_location(a0, file$8, 24, 12, 1204);
+    			add_location(a0, file$b, 24, 12, 1204);
     			attr_dev(div0, "class", "rounded-md shadow");
-    			add_location(div0, file$8, 23, 10, 1160);
+    			add_location(div0, file$b, 23, 10, 1160);
     			attr_dev(a1, "href", "/");
     			attr_dev(a1, "class", "w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-stone-700 bg-stone-100 hover:bg-stone-200 md:py-4 md:text-lg md:px-10");
-    			add_location(a1, file$8, 31, 12, 1548);
+    			add_location(a1, file$b, 31, 12, 1548);
     			attr_dev(div1, "class", "mt-5 sm:mt-0 sm:ml-3");
-    			add_location(div1, file$8, 30, 10, 1501);
+    			add_location(div1, file$b, 30, 10, 1501);
     			attr_dev(div2, "class", "mt-8 sm:flex sm:justify-center lg:justify-start");
-    			add_location(div2, file$8, 22, 8, 1088);
+    			add_location(div2, file$b, 22, 8, 1088);
     			attr_dev(div3, "class", "sm:text-center row-span-1 lg:text-left");
-    			add_location(div3, file$8, 10, 6, 398);
+    			add_location(div3, file$b, 10, 6, 398);
     			attr_dev(h11, "class", "text-2xl sm:text-3xl md:text-4xl leading-tight font-serif font-bold text-skin-muted text-center lg:hidden");
-    			add_location(h11, file$8, 43, 10, 2188);
+    			add_location(h11, file$b, 43, 10, 2188);
     			attr_dev(path0, "fillrule", "evenodd");
     			attr_dev(path0, "d", "M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z");
     			attr_dev(path0, "cliprule", "evenodd");
-    			add_location(path0, file$8, 71, 24, 3548);
+    			add_location(path0, file$b, 71, 24, 3548);
     			attr_dev(svg0, "xmlns", "http://www.w3.org/2000/svg");
     			attr_dev(svg0, "class", "h-28 w-28");
     			attr_dev(svg0, "viewBox", "0 0 20 20");
     			attr_dev(svg0, "fill", "currentColor");
-    			add_location(svg0, file$8, 66, 22, 3329);
+    			add_location(svg0, file$b, 66, 22, 3329);
     			attr_dev(h12, "class", "text-center");
-    			add_location(h12, file$8, 76, 22, 3780);
+    			add_location(h12, file$b, 76, 22, 3780);
     			attr_dev(div4, "class", "w-min h-min ");
-    			add_location(div4, file$8, 65, 20, 3280);
+    			add_location(div4, file$b, 65, 20, 3280);
     			attr_dev(div5, "class", "w-full h-full bg-stripes-stone text-stone-500 flex flex-col items-center justify-center rounded-2xl overflow-hidden");
-    			add_location(div5, file$8, 63, 18, 3110);
+    			add_location(div5, file$b, 63, 18, 3110);
     			attr_dev(path1, "fillrule", "evenodd");
     			attr_dev(path1, "d", "M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z");
     			attr_dev(path1, "cliprule", "evenodd");
-    			add_location(path1, file$8, 87, 24, 4317);
+    			add_location(path1, file$b, 87, 24, 4317);
     			attr_dev(svg1, "xmlns", "http://www.w3.org/2000/svg");
     			attr_dev(svg1, "class", "h-28 w-28");
     			attr_dev(svg1, "viewBox", "0 0 20 20");
     			attr_dev(svg1, "fill", "currentColor");
-    			add_location(svg1, file$8, 82, 22, 4098);
+    			add_location(svg1, file$b, 82, 22, 4098);
     			attr_dev(h13, "class", "text-center font-bold");
-    			add_location(h13, file$8, 92, 22, 4549);
+    			add_location(h13, file$b, 92, 22, 4549);
     			attr_dev(div6, "class", "w-min h-min ");
-    			add_location(div6, file$8, 81, 20, 4049);
+    			add_location(div6, file$b, 81, 20, 4049);
     			attr_dev(div7, "class", "w-full h-full bg-stripes-red text-red-500 flex flex-col items-center justify-center rounded-2xl overflow-hidden");
-    			add_location(div7, file$8, 79, 18, 3883);
+    			add_location(div7, file$b, 79, 18, 3883);
     			attr_dev(path2, "fillrule", "evenodd");
     			attr_dev(path2, "d", "M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z");
     			attr_dev(path2, "cliprule", "evenodd");
-    			add_location(path2, file$8, 103, 24, 5112);
+    			add_location(path2, file$b, 103, 24, 5112);
     			attr_dev(svg2, "xmlns", "http://www.w3.org/2000/svg");
     			attr_dev(svg2, "class", "h-28 w-28");
     			attr_dev(svg2, "viewBox", "0 0 20 20");
     			attr_dev(svg2, "fill", "currentColor");
-    			add_location(svg2, file$8, 98, 22, 4893);
+    			add_location(svg2, file$b, 98, 22, 4893);
     			attr_dev(h14, "class", "text-center font-bold");
-    			add_location(h14, file$8, 108, 22, 5344);
+    			add_location(h14, file$b, 108, 22, 5344);
     			attr_dev(div8, "class", "w-min h-min ");
-    			add_location(div8, file$8, 97, 20, 4844);
+    			add_location(div8, file$b, 97, 20, 4844);
     			attr_dev(div9, "class", "w-full h-full bg-stripes-yellow text-yellow-500 flex flex-col items-center justify-center rounded-2xl overflow-hidden");
-    			add_location(div9, file$8, 95, 18, 4672);
+    			add_location(div9, file$b, 95, 18, 4672);
     			attr_dev(path3, "fillrule", "evenodd");
     			attr_dev(path3, "d", "M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z");
     			attr_dev(path3, "cliprule", "evenodd");
-    			add_location(path3, file$8, 119, 24, 5902);
+    			add_location(path3, file$b, 119, 24, 5902);
     			attr_dev(svg3, "xmlns", "http://www.w3.org/2000/svg");
     			attr_dev(svg3, "class", "h-28 w-28");
     			attr_dev(svg3, "viewBox", "0 0 20 20");
     			attr_dev(svg3, "fill", "currentColor");
-    			add_location(svg3, file$8, 114, 22, 5683);
+    			add_location(svg3, file$b, 114, 22, 5683);
     			attr_dev(h15, "class", "text-center font-bold");
-    			add_location(h15, file$8, 124, 22, 6134);
+    			add_location(h15, file$b, 124, 22, 6134);
     			attr_dev(div10, "class", "w-min h-min ");
-    			add_location(div10, file$8, 113, 20, 5634);
+    			add_location(div10, file$b, 113, 20, 5634);
     			attr_dev(div11, "class", "w-full h-full bg-stripes-blue text-blue-500 flex flex-col items-center justify-center rounded-2xl overflow-hidden");
-    			add_location(div11, file$8, 111, 18, 5466);
+    			add_location(div11, file$b, 111, 18, 5466);
     			attr_dev(div12, "class", "grid grid-cols-2 gap-4 items-center justify-items-center ");
-    			add_location(div12, file$8, 61, 16, 3002);
+    			add_location(div12, file$b, 61, 16, 3002);
     			attr_dev(path4, "fillrule", "evenodd");
     			attr_dev(path4, "d", "M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z");
     			attr_dev(path4, "cliprule", "evenodd");
-    			add_location(path4, file$8, 136, 22, 6676);
+    			add_location(path4, file$b, 136, 22, 6676);
     			attr_dev(svg4, "xmlns", "http://www.w3.org/2000/svg");
     			attr_dev(svg4, "class", "h-6 w-6");
     			attr_dev(svg4, "viewBox", "0 0 20 20");
     			attr_dev(svg4, "fill", "currentColor");
-    			add_location(svg4, file$8, 131, 20, 6469);
+    			add_location(svg4, file$b, 131, 20, 6469);
     			attr_dev(h16, "class", "text-[10px]");
-    			add_location(h16, file$8, 141, 20, 7012);
+    			add_location(h16, file$b, 141, 20, 7012);
     			attr_dev(div13, "class", "w-max flex flex-col items-center justify-center");
-    			add_location(div13, file$8, 130, 18, 6387);
+    			add_location(div13, file$b, 130, 18, 6387);
     			attr_dev(path5, "d", "M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z");
-    			add_location(path5, file$8, 149, 22, 7380);
+    			add_location(path5, file$b, 149, 22, 7380);
     			attr_dev(svg5, "xmlns", "http://www.w3.org/2000/svg");
     			attr_dev(svg5, "class", "h-6 w-6");
     			attr_dev(svg5, "viewBox", "0 0 20 20");
     			attr_dev(svg5, "fill", "currentColor");
-    			add_location(svg5, file$8, 144, 20, 7173);
+    			add_location(svg5, file$b, 144, 20, 7173);
     			attr_dev(h17, "class", "text-[10px]");
-    			add_location(h17, file$8, 152, 20, 7619);
+    			add_location(h17, file$b, 152, 20, 7619);
     			attr_dev(div14, "class", "w-max flex flex-col items-center justify-center");
-    			add_location(div14, file$8, 143, 18, 7091);
+    			add_location(div14, file$b, 143, 18, 7091);
     			attr_dev(path6, "d", "M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z");
-    			add_location(path6, file$8, 160, 22, 7991);
+    			add_location(path6, file$b, 160, 22, 7991);
     			attr_dev(path7, "d", "M16.707 3.293a1 1 0 010 1.414L15.414 6l1.293 1.293a1 1 0 01-1.414 1.414L14 7.414l-1.293 1.293a1 1 0 11-1.414-1.414L12.586 6l-1.293-1.293a1 1 0 011.414-1.414L14 4.586l1.293-1.293a1 1 0 011.414 0z");
-    			add_location(path7, file$8, 162, 22, 8256);
+    			add_location(path7, file$b, 162, 22, 8256);
     			attr_dev(svg6, "xmlns", "http://www.w3.org/2000/svg");
     			attr_dev(svg6, "class", "h-6 w-6");
     			attr_dev(svg6, "viewBox", "0 0 20 20");
     			attr_dev(svg6, "fill", "currentColor");
-    			add_location(svg6, file$8, 155, 20, 7784);
+    			add_location(svg6, file$b, 155, 20, 7784);
     			attr_dev(h18, "class", "text-[10px]");
-    			add_location(h18, file$8, 165, 20, 8535);
+    			add_location(h18, file$b, 165, 20, 8535);
     			attr_dev(div15, "class", "w-max flex flex-col items-center justify-center");
-    			add_location(div15, file$8, 154, 18, 7702);
+    			add_location(div15, file$b, 154, 18, 7702);
     			attr_dev(path8, "d", "M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z");
-    			add_location(path8, file$8, 173, 22, 8905);
+    			add_location(path8, file$b, 173, 22, 8905);
     			attr_dev(svg7, "xmlns", "http://www.w3.org/2000/svg");
     			attr_dev(svg7, "class", "h-6 w-6");
     			attr_dev(svg7, "viewBox", "0 0 20 20");
     			attr_dev(svg7, "fill", "currentColor");
-    			add_location(svg7, file$8, 168, 20, 8698);
+    			add_location(svg7, file$b, 168, 20, 8698);
     			attr_dev(h19, "class", "text-[10px]");
-    			add_location(h19, file$8, 176, 20, 9125);
+    			add_location(h19, file$b, 176, 20, 9125);
     			attr_dev(div16, "class", "w-max flex flex-col items-center justify-center");
-    			add_location(div16, file$8, 167, 18, 8616);
+    			add_location(div16, file$b, 167, 18, 8616);
     			attr_dev(div17, "class", "w-min flex flex-row space-x-8 m-auto my-4 text-stone-400/50");
-    			add_location(div17, file$8, 128, 16, 6277);
+    			add_location(div17, file$b, 128, 16, 6277);
     			attr_dev(div18, "class", "relative w-full h-full aspect-[4/3] p-4 border-8 border-stone-300/50 bg-stone-700 border-collapse rounded-[2rem] shadow-md");
-    			add_location(div18, file$8, 59, 14, 2833);
+    			add_location(div18, file$b, 59, 14, 2833);
     			attr_dev(foreignObject0, "class", "-rotate-3 lg:rotate-0");
     			attr_dev(foreignObject0, "x", "64");
     			attr_dev(foreignObject0, "y", "128");
     			attr_dev(foreignObject0, "width", "512");
     			attr_dev(foreignObject0, "height", "384");
-    			add_location(foreignObject0, file$8, 53, 12, 2663);
+    			add_location(foreignObject0, file$b, 53, 12, 2663);
     			attr_dev(svg8, "class", "w-full -my-12 lg:my-0 ");
     			attr_dev(svg8, "viewBox", "0 0 640 640");
     			attr_dev(svg8, "xmlns", "http://www.w3.org/2000/svg");
-    			add_location(svg8, file$8, 49, 10, 2521);
+    			add_location(svg8, file$b, 49, 10, 2521);
     			attr_dev(div19, "class", "w-full row-span-1 flex flex-col items-stretch justify-center");
-    			add_location(div19, file$8, 41, 8, 2093);
+    			add_location(div19, file$b, 41, 8, 2093);
     			attr_dev(h110, "class", "text-2xl sm:text-3xl md:text-4xl leading-tight font-serif font-bold text-skin-muted text-center lg:hidden");
-    			add_location(h110, file$8, 184, 10, 9375);
+    			add_location(h110, file$b, 184, 10, 9375);
     			attr_dev(div20, "class", "w-1/2 h-12 bg-stripes-stone rounded-xl");
-    			add_location(div20, file$8, 202, 18, 10208);
+    			add_location(div20, file$b, 202, 18, 10208);
     			attr_dev(h111, "class", "ml-2 text-[14px] font-bold text-stone-300");
-    			add_location(h111, file$8, 204, 20, 10356);
+    			add_location(h111, file$b, 204, 20, 10356);
     			attr_dev(h112, "class", "ml-2 text-[8px] text-stone-400/50");
-    			add_location(h112, file$8, 207, 20, 10490);
+    			add_location(h112, file$b, 207, 20, 10490);
     			attr_dev(div21, "class", "flex flex-col justify-start items center");
-    			add_location(div21, file$8, 203, 18, 10281);
+    			add_location(div21, file$b, 203, 18, 10281);
     			attr_dev(div22, "class", "w-full h-[20%] -mb-2 flex flex-row items-top");
-    			add_location(div22, file$8, 201, 16, 10131);
+    			add_location(div22, file$b, 201, 16, 10131);
     			attr_dev(div23, "class", "w-full h-0.5 mb-3 bg-stone-500/20 rounded-2xl");
-    			add_location(div23, file$8, 212, 16, 10682);
+    			add_location(div23, file$b, 212, 16, 10682);
     			attr_dev(div24, "class", "w-8 h-8 bg-stripes-stone ring ring-stone-600 rounded-full");
-    			add_location(div24, file$8, 216, 20, 10958);
+    			add_location(div24, file$b, 216, 20, 10958);
     			attr_dev(h113, "class", "text-[8px] font-bold font-mono pt-[0.25rem] text-center text-stone-50/50");
-    			add_location(h113, file$8, 218, 20, 11074);
+    			add_location(h113, file$b, 218, 20, 11074);
     			attr_dev(h114, "class", "w-max text-[10px] font-mono -mt-0.5 text-center text-stone-50/50");
-    			add_location(h114, file$8, 222, 20, 11255);
+    			add_location(h114, file$b, 222, 20, 11255);
     			attr_dev(div25, "class", "flex flex-col items-center justify-evenly");
-    			add_location(div25, file$8, 215, 18, 10882);
+    			add_location(div25, file$b, 215, 18, 10882);
     			attr_dev(div26, "class", "w-8 h-8 bg-stripes-stone ring-1 ring-stone-600 rounded-full");
-    			add_location(div26, file$8, 228, 20, 11529);
+    			add_location(div26, file$b, 228, 20, 11529);
     			attr_dev(path9, "fillrule", "evenodd");
     			attr_dev(path9, "d", "M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z");
     			attr_dev(path9, "cliprule", "evenodd");
-    			add_location(path9, file$8, 235, 22, 11884);
+    			add_location(path9, file$b, 235, 22, 11884);
     			attr_dev(svg9, "xmlns", "http://www.w3.org/2000/svg");
     			attr_dev(svg9, "class", "h-4 w-4 text-stone-300 -mt-4 self-end");
     			attr_dev(svg9, "viewBox", "0 0 20 20");
     			attr_dev(svg9, "fill", "currentColor");
-    			add_location(svg9, file$8, 230, 20, 11647);
+    			add_location(svg9, file$b, 230, 20, 11647);
     			attr_dev(h115, "class", "text-[8px] font-bold font-mono pt-[0.25rem] text-center text-stone-50/50");
-    			add_location(h115, file$8, 240, 20, 12220);
+    			add_location(h115, file$b, 240, 20, 12220);
     			attr_dev(h116, "class", "w-max text-[10px] font-mono -mt-0.5 text-center text-stone-50/50");
-    			add_location(h116, file$8, 244, 20, 12404);
+    			add_location(h116, file$b, 244, 20, 12404);
     			attr_dev(div27, "class", "flex flex-col items-center justify-evenly");
-    			add_location(div27, file$8, 227, 18, 11453);
+    			add_location(div27, file$b, 227, 18, 11453);
     			attr_dev(div28, "class", "w-8 h-8 bg-stripes-stone ring-1 ring-stone-600 rounded-full");
-    			add_location(div28, file$8, 250, 20, 12680);
+    			add_location(div28, file$b, 250, 20, 12680);
     			attr_dev(path10, "fillrule", "evenodd");
     			attr_dev(path10, "d", "M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z");
     			attr_dev(path10, "cliprule", "evenodd");
-    			add_location(path10, file$8, 257, 22, 13035);
+    			add_location(path10, file$b, 257, 22, 13035);
     			attr_dev(svg10, "xmlns", "http://www.w3.org/2000/svg");
     			attr_dev(svg10, "class", "h-4 w-4 text-stone-300 -mt-4 self-end");
     			attr_dev(svg10, "viewBox", "0 0 20 20");
     			attr_dev(svg10, "fill", "currentColor");
-    			add_location(svg10, file$8, 252, 20, 12798);
+    			add_location(svg10, file$b, 252, 20, 12798);
     			attr_dev(h117, "class", "text-[8px] font-bold font-mono pt-[0.25rem] text-center text-stone-50/50");
-    			add_location(h117, file$8, 262, 20, 13371);
+    			add_location(h117, file$b, 262, 20, 13371);
     			attr_dev(h118, "class", "w-max text-[10px] font-mono -mt-0.5 text-center text-stone-50/50");
-    			add_location(h118, file$8, 266, 20, 13555);
+    			add_location(h118, file$b, 266, 20, 13555);
     			attr_dev(div29, "class", "flex flex-col items-center justify-evenly");
-    			add_location(div29, file$8, 249, 18, 12604);
+    			add_location(div29, file$b, 249, 18, 12604);
     			attr_dev(div30, "class", "w-8 h-8 bg-stripes-stone ring-1 ring-stone-600 rounded-full");
-    			add_location(div30, file$8, 272, 20, 13828);
+    			add_location(div30, file$b, 272, 20, 13828);
     			attr_dev(path11, "fillrule", "evenodd");
     			attr_dev(path11, "d", "M9 3a1 1 0 012 0v5.5a.5.5 0 001 0V4a1 1 0 112 0v4.5a.5.5 0 001 0V6a1 1 0 112 0v5a7 7 0 11-14 0V9a1 1 0 012 0v2.5a.5.5 0 001 0V4a1 1 0 012 0v4.5a.5.5 0 001 0V3z");
     			attr_dev(path11, "cliprule", "evenodd");
-    			add_location(path11, file$8, 279, 22, 14183);
+    			add_location(path11, file$b, 279, 22, 14183);
     			attr_dev(svg11, "xmlns", "http://www.w3.org/2000/svg");
     			attr_dev(svg11, "class", "h-4 w-4 text-stone-300 -mt-4 self-end");
     			attr_dev(svg11, "viewBox", "0 0 20 20");
     			attr_dev(svg11, "fill", "currentColor");
-    			add_location(svg11, file$8, 274, 20, 13946);
+    			add_location(svg11, file$b, 274, 20, 13946);
     			attr_dev(h119, "class", "text-[8px] font-bold font-mono pt-[0.25rem] text-center text-stone-50/50");
-    			add_location(h119, file$8, 284, 20, 14513);
+    			add_location(h119, file$b, 284, 20, 14513);
     			attr_dev(h120, "class", "w-max text-[10px] font-mono -mt-0.5 text-center text-stone-50/50");
-    			add_location(h120, file$8, 288, 20, 14698);
+    			add_location(h120, file$b, 288, 20, 14698);
     			attr_dev(div31, "class", "flex flex-col items-center justify-evenly");
-    			add_location(div31, file$8, 271, 18, 13752);
+    			add_location(div31, file$b, 271, 18, 13752);
     			attr_dev(div32, "class", "w-8 h-8 bg-stripes-stone ring-1 ring-stone-600 rounded-full");
-    			add_location(div32, file$8, 294, 20, 14971);
+    			add_location(div32, file$b, 294, 20, 14971);
     			attr_dev(h121, "class", "text-[8px] font-bold font-mono pt-[0.25rem] text-center text-stone-50/50");
-    			add_location(h121, file$8, 296, 20, 15089);
+    			add_location(h121, file$b, 296, 20, 15089);
     			attr_dev(h122, "class", "w-max text-[10px] font-mono -mt-0.5 text-center text-stone-50/50");
-    			add_location(h122, file$8, 300, 20, 15274);
+    			add_location(h122, file$b, 300, 20, 15274);
     			attr_dev(div33, "class", "flex flex-col items-center justify-evenly");
-    			add_location(div33, file$8, 293, 18, 14895);
+    			add_location(div33, file$b, 293, 18, 14895);
     			attr_dev(div34, "class", "w-8 h-8 bg-stripes-stone ring-1 ring-stone-600 rounded-full");
-    			add_location(div34, file$8, 306, 20, 15547);
+    			add_location(div34, file$b, 306, 20, 15547);
     			attr_dev(h123, "class", "text-[8px] font-bold font-mono pt-[0.25rem] text-center text-stone-50/50");
-    			add_location(h123, file$8, 308, 20, 15665);
+    			add_location(h123, file$b, 308, 20, 15665);
     			attr_dev(h124, "class", "w-max text-[10px] font-mono -mt-0.5 text-center text-stone-50/50");
-    			add_location(h124, file$8, 312, 20, 15850);
+    			add_location(h124, file$b, 312, 20, 15850);
     			attr_dev(div35, "class", "flex flex-col items-center justify-evenly");
-    			add_location(div35, file$8, 305, 18, 15471);
+    			add_location(div35, file$b, 305, 18, 15471);
     			attr_dev(div36, "class", "w-8 h-8 bg-stripes-stone ring-1 ring-stone-600 rounded-full");
-    			add_location(div36, file$8, 318, 20, 16123);
+    			add_location(div36, file$b, 318, 20, 16123);
     			attr_dev(h125, "class", "text-[8px] font-bold font-mono pt-[0.25rem] text-center text-stone-50/50");
-    			add_location(h125, file$8, 320, 20, 16241);
+    			add_location(h125, file$b, 320, 20, 16241);
     			attr_dev(h126, "class", "w-max text-[10px] font-mono -mt-0.5 text-center text-stone-50/50");
-    			add_location(h126, file$8, 324, 20, 16426);
+    			add_location(h126, file$b, 324, 20, 16426);
     			attr_dev(div37, "class", "flex flex-col items-center justify-evenly");
-    			add_location(div37, file$8, 317, 18, 16047);
+    			add_location(div37, file$b, 317, 18, 16047);
     			attr_dev(div38, "class", "w-8 h-8 bg-stripes-stone ring-1 ring-stone-600 rounded-full");
-    			add_location(div38, file$8, 330, 20, 16699);
+    			add_location(div38, file$b, 330, 20, 16699);
     			attr_dev(h127, "class", "text-[8px] font-bold font-mono pt-[0.25rem] text-center text-stone-50/50");
-    			add_location(h127, file$8, 332, 20, 16817);
+    			add_location(h127, file$b, 332, 20, 16817);
     			attr_dev(h128, "class", "w-max text-[10px] font-mono -mt-0.5 text-center text-stone-50/50");
-    			add_location(h128, file$8, 336, 20, 17002);
+    			add_location(h128, file$b, 336, 20, 17002);
     			attr_dev(div39, "class", "flex flex-col items-center justify-evenly");
-    			add_location(div39, file$8, 329, 18, 16623);
+    			add_location(div39, file$b, 329, 18, 16623);
     			attr_dev(div40, "class", "w-8 h-8 bg-stripes-stone ring-1 ring-stone-600 rounded-full");
-    			add_location(div40, file$8, 342, 20, 17276);
+    			add_location(div40, file$b, 342, 20, 17276);
     			attr_dev(path12, "fillrule", "evenodd");
     			attr_dev(path12, "d", "M9 3a1 1 0 012 0v5.5a.5.5 0 001 0V4a1 1 0 112 0v4.5a.5.5 0 001 0V6a1 1 0 112 0v5a7 7 0 11-14 0V9a1 1 0 012 0v2.5a.5.5 0 001 0V4a1 1 0 012 0v4.5a.5.5 0 001 0V3z");
     			attr_dev(path12, "cliprule", "evenodd");
-    			add_location(path12, file$8, 349, 22, 17631);
+    			add_location(path12, file$b, 349, 22, 17631);
     			attr_dev(svg12, "xmlns", "http://www.w3.org/2000/svg");
     			attr_dev(svg12, "class", "h-4 w-4 text-stone-300 -mt-4 self-end");
     			attr_dev(svg12, "viewBox", "0 0 20 20");
     			attr_dev(svg12, "fill", "currentColor");
-    			add_location(svg12, file$8, 344, 20, 17394);
+    			add_location(svg12, file$b, 344, 20, 17394);
     			attr_dev(h129, "class", "text-[8px] font-bold font-mono pt-[0.25rem] text-center text-stone-50/50");
-    			add_location(h129, file$8, 354, 20, 17961);
+    			add_location(h129, file$b, 354, 20, 17961);
     			attr_dev(h130, "class", "w-max text-[10px] font-mono -mt-0.5 text-center text-stone-50/50");
-    			add_location(h130, file$8, 358, 20, 18146);
+    			add_location(h130, file$b, 358, 20, 18146);
     			attr_dev(div41, "class", "flex flex-col items-center justify-evenly");
-    			add_location(div41, file$8, 341, 18, 17200);
+    			add_location(div41, file$b, 341, 18, 17200);
     			attr_dev(div42, "class", "w-full h-[65%] grid grid-cols-3 gap-4 items-center justify-items-center");
-    			add_location(div42, file$8, 213, 16, 10760);
+    			add_location(div42, file$b, 213, 16, 10760);
     			attr_dev(div43, "class", "w-full h-[8%] mt-6 flex items-center justify-center rounded-2xl bg-stone-500/40 text-stone-100");
-    			add_location(div43, file$8, 364, 16, 18363);
+    			add_location(div43, file$b, 364, 16, 18363);
     			attr_dev(div44, "class", "w-48 h-[23rem] p-4 border-8 border-stone-300/50 bg-stone-700 shadow-md rounded-[2rem]");
-    			add_location(div44, file$8, 199, 14, 9998);
+    			add_location(div44, file$b, 199, 14, 9998);
     			attr_dev(foreignObject1, "class", "rotate-3 lg:rotate-0");
     			attr_dev(foreignObject1, "x", "104");
     			attr_dev(foreignObject1, "y", "16");
     			attr_dev(foreignObject1, "width", "192");
     			attr_dev(foreignObject1, "height", "368");
-    			add_location(foreignObject1, file$8, 193, 12, 9829);
+    			add_location(foreignObject1, file$b, 193, 12, 9829);
     			attr_dev(svg13, "class", "w-full my-6 lg:my-0 lg:absolute lg:top-32 lg:-right-48 lg:scale-50 lg:-mt-16");
     			attr_dev(svg13, "viewBox", "0 0 400 400");
     			attr_dev(svg13, "xmlns", "http://www.w3.org/2000/svg");
-    			add_location(svg13, file$8, 189, 10, 9633);
+    			add_location(svg13, file$b, 189, 10, 9633);
     			attr_dev(div45, "class", "row-span-1 flex flex-col items-center justify-start");
-    			add_location(div45, file$8, 183, 8, 9299);
+    			add_location(div45, file$b, 183, 8, 9299);
     			attr_dev(div46, "class", "relative h-auto lg:-mt-36 row-span-1 md:row-span-2 grid grid-rows-[auto_minmax(376px,_1fr)] lg:grid-rows-none gap-8 lg:gap-0 w-full md:h-full max-w-[36rem] items-center justify-items-center");
-    			add_location(div46, file$8, 39, 6, 1873);
+    			add_location(div46, file$b, 39, 6, 1873);
     			attr_dev(div47, "class", "w-4/5 grid grid-rows-[auto] lg:grid-cols-2 lg:grid-rows-[auto] gap-12 items-center justify-items-center");
-    			add_location(div47, file$8, 8, 4, 268);
+    			add_location(div47, file$b, 8, 4, 268);
     			attr_dev(section, "id", "main");
     			attr_dev(section, "class", "lg:mt-16 flex items-center justify-center");
-    			add_location(section, file$8, 7, 2, 194);
+    			add_location(section, file$b, 7, 2, 194);
     			attr_dev(main, "class", "bg-white text-skin-base h-screen w-full flex flex-col items-center justify-start mt-32 lg:mt-16");
-    			add_location(main, file$8, 4, 0, 68);
+    			add_location(main, file$b, 4, 0, 68);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -24691,7 +25139,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$9.name,
+    		id: create_fragment$c.name,
     		type: "component",
     		source: "",
     		ctx
@@ -24700,7 +25148,7 @@ var app = (function () {
     	return block;
     }
 
-    function instance$9($$self, $$props, $$invalidate) {
+    function instance$c($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('Home', slots, []);
     	const writable_props = [];
@@ -24716,13 +25164,13 @@ var app = (function () {
     class Home extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$9, create_fragment$9, safe_not_equal, {});
+    		init(this, options, instance$c, create_fragment$c, safe_not_equal, {});
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "Home",
     			options,
-    			id: create_fragment$9.name
+    			id: create_fragment$c.name
     		});
     	}
     }
@@ -24742,7 +25190,7 @@ var app = (function () {
     });
 
     // (12:2) {:else}
-    function create_else_block$1(ctx) {
+    function create_else_block$2(ctx) {
     	let home;
     	let current;
     	home = new Home({ $$inline: true });
@@ -24772,7 +25220,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_else_block$1.name,
+    		id: create_else_block$2.name,
     		type: "else",
     		source: "(12:2) {:else}",
     		ctx
@@ -24782,7 +25230,7 @@ var app = (function () {
     }
 
     // (10:2) {#if $user.uid}
-    function create_if_block$1(ctx) {
+    function create_if_block$2(ctx) {
     	let current;
     	const default_slot_template = /*#slots*/ ctx[2].default;
     	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[3], get_default_slot_context);
@@ -24830,7 +25278,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$1.name,
+    		id: create_if_block$2.name,
     		type: "if",
     		source: "(10:2) {#if $user.uid}",
     		ctx
@@ -24840,12 +25288,12 @@ var app = (function () {
     }
 
     // (9:0) <Route {path} let:params let:location let:navigate>
-    function create_default_slot$1(ctx) {
+    function create_default_slot$3(ctx) {
     	let current_block_type_index;
     	let if_block;
     	let if_block_anchor;
     	let current;
-    	const if_block_creators = [create_if_block$1, create_else_block$1];
+    	const if_block_creators = [create_if_block$2, create_else_block$2];
     	const if_blocks = [];
 
     	function select_block_type(ctx, dirty) {
@@ -24910,7 +25358,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot$1.name,
+    		id: create_default_slot$3.name,
     		type: "slot",
     		source: "(9:0) <Route {path} let:params let:location let:navigate>",
     		ctx
@@ -24919,7 +25367,7 @@ var app = (function () {
     	return block;
     }
 
-    function create_fragment$8(ctx) {
+    function create_fragment$b(ctx) {
     	let route;
     	let current;
 
@@ -24928,7 +25376,7 @@ var app = (function () {
     				path: /*path*/ ctx[0],
     				$$slots: {
     					default: [
-    						create_default_slot$1,
+    						create_default_slot$3,
     						({ params, location, navigate }) => ({ 4: params, 5: location, 6: navigate }),
     						({ params, location, navigate }) => (params ? 16 : 0) | (location ? 32 : 0) | (navigate ? 64 : 0)
     					]
@@ -24975,7 +25423,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$8.name,
+    		id: create_fragment$b.name,
     		type: "component",
     		source: "",
     		ctx
@@ -24984,7 +25432,7 @@ var app = (function () {
     	return block;
     }
 
-    function instance$8($$self, $$props, $$invalidate) {
+    function instance$b($$self, $$props, $$invalidate) {
     	let $user;
     	validate_store(user, 'user');
     	component_subscribe($$self, user, $$value => $$invalidate(1, $user = $$value));
@@ -25018,13 +25466,13 @@ var app = (function () {
     class PrivateRoute extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$8, create_fragment$8, safe_not_equal, { path: 0 });
+    		init(this, options, instance$b, create_fragment$b, safe_not_equal, { path: 0 });
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "PrivateRoute",
     			options,
-    			id: create_fragment$8.name
+    			id: create_fragment$b.name
     		});
 
     		const { ctx } = this.$$;
@@ -25044,196 +25492,2055 @@ var app = (function () {
     	}
     }
 
-    /* src/pages/Dashboard.svelte generated by Svelte v3.45.0 */
+    /* src/pages/Account.svelte generated by Svelte v3.45.0 */
+    const file$a = "src/pages/Account.svelte";
 
-    const { console: console_1 } = globals;
-    const file$7 = "src/pages/Dashboard.svelte";
-
-    function create_fragment$7(ctx) {
-    	let div3;
-    	let menu;
+    function create_fragment$a(ctx) {
+    	let div;
     	let t0;
-    	let main;
-    	let header;
-    	let div0;
-    	let h1;
+    	let t1_value = /*$user*/ ctx[0].displayName + "";
+    	let t1;
     	let t2;
-    	let div2;
+
+    	const block = {
+    		c: function create() {
+    			div = element("div");
+    			t0 = text("Hey, ");
+    			t1 = text(t1_value);
+    			t2 = text(", you are in Account Page.");
+    			attr_dev(div, "class", "w-full h-full flex flex-col items-center justify-evenly");
+    			add_location(div, file$a, 4, 0, 55);
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, div, anchor);
+    			append_dev(div, t0);
+    			append_dev(div, t1);
+    			append_dev(div, t2);
+    		},
+    		p: function update(ctx, [dirty]) {
+    			if (dirty & /*$user*/ 1 && t1_value !== (t1_value = /*$user*/ ctx[0].displayName + "")) set_data_dev(t1, t1_value);
+    		},
+    		i: noop$1,
+    		o: noop$1,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(div);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_fragment$a.name,
+    		type: "component",
+    		source: "",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function instance$a($$self, $$props, $$invalidate) {
+    	let $user;
+    	validate_store(user, 'user');
+    	component_subscribe($$self, user, $$value => $$invalidate(0, $user = $$value));
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots('Account', slots, []);
+    	const writable_props = [];
+
+    	Object.keys($$props).forEach(key => {
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console.warn(`<Account> was created with unknown prop '${key}'`);
+    	});
+
+    	$$self.$capture_state = () => ({ user, $user });
+    	return [$user];
+    }
+
+    class Account extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+    		init(this, options, instance$a, create_fragment$a, safe_not_equal, {});
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "Account",
+    			options,
+    			id: create_fragment$a.name
+    		});
+    	}
+    }
+
+    /* src/pages/Services.svelte generated by Svelte v3.45.0 */
+
+    const { Object: Object_1, console: console_1 } = globals;
+    const file$9 = "src/pages/Services.svelte";
+
+    function get_each_context(ctx, list, i) {
+    	const child_ctx = ctx.slice();
+    	child_ctx[16] = list[i];
+    	return child_ctx;
+    }
+
+    function get_each_context_1(ctx, list, i) {
+    	const child_ctx = ctx.slice();
+    	child_ctx[20] = list[i][0];
+    	child_ctx[21] = list[i][1];
+    	return child_ctx;
+    }
+
+    // (190:2) {:catch}
+    function create_catch_block_1(ctx) {
+    	let div;
+
+    	const block = {
+    		c: function create() {
+    			div = element("div");
+    			add_location(div, file$9, 190, 4, 6469);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, div, anchor);
+    		},
+    		p: noop$1,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(div);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_catch_block_1.name,
+    		type: "catch",
+    		source: "(190:2) {:catch}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (138:2) {:then items}
+    function create_then_block_1(ctx) {
+    	let if_block_anchor;
+    	let if_block = /*items*/ ctx[19] !== null && create_if_block_2$1(ctx);
+
+    	const block = {
+    		c: function create() {
+    			if (if_block) if_block.c();
+    			if_block_anchor = empty();
+    		},
+    		m: function mount(target, anchor) {
+    			if (if_block) if_block.m(target, anchor);
+    			insert_dev(target, if_block_anchor, anchor);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (/*items*/ ctx[19] !== null) if_block.p(ctx, dirty);
+    		},
+    		d: function destroy(detaching) {
+    			if (if_block) if_block.d(detaching);
+    			if (detaching) detach_dev(if_block_anchor);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_then_block_1.name,
+    		type: "then",
+    		source: "(138:2) {:then items}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (139:4) {#if items !== null}
+    function create_if_block_2$1(ctx) {
+    	let each_1_anchor;
+    	let each_value_1 = Object.entries(/*items*/ ctx[19]);
+    	validate_each_argument(each_value_1);
+    	let each_blocks = [];
+
+    	for (let i = 0; i < each_value_1.length; i += 1) {
+    		each_blocks[i] = create_each_block_1(get_each_context_1(ctx, each_value_1, i));
+    	}
+
+    	const block = {
+    		c: function create() {
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].c();
+    			}
+
+    			each_1_anchor = empty();
+    		},
+    		m: function mount(target, anchor) {
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].m(target, anchor);
+    			}
+
+    			insert_dev(target, each_1_anchor, anchor);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*navigate, Object, getServicesPromise*/ 136) {
+    				each_value_1 = Object.entries(/*items*/ ctx[19]);
+    				validate_each_argument(each_value_1);
+    				let i;
+
+    				for (i = 0; i < each_value_1.length; i += 1) {
+    					const child_ctx = get_each_context_1(ctx, each_value_1, i);
+
+    					if (each_blocks[i]) {
+    						each_blocks[i].p(child_ctx, dirty);
+    					} else {
+    						each_blocks[i] = create_each_block_1(child_ctx);
+    						each_blocks[i].c();
+    						each_blocks[i].m(each_1_anchor.parentNode, each_1_anchor);
+    					}
+    				}
+
+    				for (; i < each_blocks.length; i += 1) {
+    					each_blocks[i].d(1);
+    				}
+
+    				each_blocks.length = each_value_1.length;
+    			}
+    		},
+    		d: function destroy(detaching) {
+    			destroy_each(each_blocks, detaching);
+    			if (detaching) detach_dev(each_1_anchor);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block_2$1.name,
+    		type: "if",
+    		source: "(139:4) {#if items !== null}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (140:6) {#each Object.entries(items) as [id, service]}
+    function create_each_block_1(ctx) {
+    	let div4;
+    	let div0;
+    	let h40;
+    	let t1;
+    	let h10;
+    	let t2_value = /*service*/ ctx[21].plan + "";
+    	let t2;
+    	let t3;
     	let div1;
-    	let span0;
-    	let t4;
-    	let span1;
-    	let t5_value = (/*$apikey*/ ctx[0] || "api key unavailable") + "";
+    	let h41;
     	let t5;
-    	let t6;
-    	let svg0;
-    	let path0;
-    	let path1;
+    	let h11;
     	let t7;
-    	let span2;
+    	let div2;
+    	let h42;
     	let t9;
-    	let span3;
-    	let t10_value = (/*$publickey*/ ctx[1] || "api key unavailable") + "";
-    	let t10;
+    	let h12;
     	let t11;
-    	let svg1;
-    	let path2;
-    	let path3;
-    	let current;
+    	let div3;
+    	let h43;
+    	let t13;
+    	let h13;
+    	let t15;
+    	let button;
+    	let span;
+    	let t17;
+    	let svg;
+    	let path;
+    	let t18;
     	let mounted;
     	let dispose;
-    	menu = new Menu({ $$inline: true });
+
+    	function click_handler() {
+    		return /*click_handler*/ ctx[8](/*id*/ ctx[20]);
+    	}
+
+    	const block = {
+    		c: function create() {
+    			div4 = element("div");
+    			div0 = element("div");
+    			h40 = element("h4");
+    			h40.textContent = "Plan";
+    			t1 = space();
+    			h10 = element("h1");
+    			t2 = text(t2_value);
+    			t3 = space();
+    			div1 = element("div");
+    			h41 = element("h4");
+    			h41.textContent = "consumers";
+    			t5 = space();
+    			h11 = element("h1");
+    			h11.textContent = "80,900";
+    			t7 = space();
+    			div2 = element("div");
+    			h42 = element("h4");
+    			h42.textContent = "rooms";
+    			t9 = space();
+    			h12 = element("h1");
+    			h12.textContent = "452";
+    			t11 = space();
+    			div3 = element("div");
+    			h43 = element("h4");
+    			h43.textContent = "users";
+    			t13 = space();
+    			h13 = element("h1");
+    			h13.textContent = "4500";
+    			t15 = space();
+    			button = element("button");
+    			span = element("span");
+    			span.textContent = "Details";
+    			t17 = space();
+    			svg = svg_element("svg");
+    			path = svg_element("path");
+    			t18 = space();
+    			attr_dev(h40, "class", "text-xs tracking-widest font-light -mb-1 uppercase");
+    			add_location(h40, file$9, 144, 12, 4421);
+    			attr_dev(h10, "class", "text-4xl font-bold");
+    			add_location(h10, file$9, 147, 12, 4534);
+    			attr_dev(div0, "class", "flex flex-col items-start bg-stone-300/10 hover:bg-stone-300/20 py-2 px-4 rounded-lg");
+    			add_location(div0, file$9, 142, 10, 4298);
+    			attr_dev(h41, "class", "text-xs tracking-widest font-light -mb-1 uppercase");
+    			add_location(h41, file$9, 151, 12, 4735);
+    			attr_dev(h11, "class", "text-4xl font-bold");
+    			add_location(h11, file$9, 154, 12, 4853);
+    			attr_dev(div1, "class", "flex flex-col items-start bg-stone-300/10 hover:bg-stone-300/20 py-2 px-4 rounded-lg");
+    			add_location(div1, file$9, 149, 10, 4612);
+    			attr_dev(h42, "class", "text-xs tracking-widest font-light -mb-1 uppercase");
+    			add_location(h42, file$9, 158, 12, 5046);
+    			attr_dev(h12, "class", "text-4xl font-bold");
+    			add_location(h12, file$9, 161, 12, 5160);
+    			attr_dev(div2, "class", "flex flex-col items-start bg-stone-300/10 hover:bg-stone-300/20 py-2 px-4 rounded-lg");
+    			add_location(div2, file$9, 156, 10, 4923);
+    			attr_dev(h43, "class", "text-xs tracking-widest font-light -mb-1 uppercase");
+    			add_location(h43, file$9, 165, 12, 5350);
+    			attr_dev(h13, "class", "text-4xl font-bold");
+    			add_location(h13, file$9, 168, 12, 5464);
+    			attr_dev(div3, "class", "flex flex-col items-start bg-stone-300/10 hover:bg-stone-300/20 py-2 px-4 rounded-lg");
+    			add_location(div3, file$9, 163, 10, 5227);
+    			add_location(span, file$9, 174, 12, 5854);
+    			attr_dev(path, "fill-rule", "evenodd");
+    			attr_dev(path, "d", "M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z");
+    			attr_dev(path, "clip-rule", "evenodd");
+    			add_location(path, file$9, 180, 14, 6138);
+    			attr_dev(svg, "xmlns", "http://www.w3.org/2000/svg");
+    			attr_dev(svg, "class", "group-hover:animate-[directRight_1s_ease-in-out_infinite] -mr-1 ml-3 h-5 w-5 text-stone-500");
+    			attr_dev(svg, "viewBox", "0 0 20 20");
+    			attr_dev(svg, "fill", "currentColor");
+    			add_location(svg, file$9, 175, 12, 5887);
+    			attr_dev(button, "type", "button");
+    			attr_dev(button, "class", "col-span-2 w-full inline-flex items-center justify-between px-4 py-2 font-semibold leading-6 text-sm rounded-md text-stone-500 group bg-stone-300/10 hover:bg-stone-300/20 transition ease-in-out duration-150");
+    			add_location(button, file$9, 170, 10, 5532);
+    			attr_dev(div4, "class", "grid grid-cols-2 gap-4 cursor-pointer p-4 rounded-2xl border border-stone-100 text-stone-500 bg-white shadow-sm group hover:shadow-md");
+    			add_location(div4, file$9, 140, 8, 4130);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, div4, anchor);
+    			append_dev(div4, div0);
+    			append_dev(div0, h40);
+    			append_dev(div0, t1);
+    			append_dev(div0, h10);
+    			append_dev(h10, t2);
+    			append_dev(div4, t3);
+    			append_dev(div4, div1);
+    			append_dev(div1, h41);
+    			append_dev(div1, t5);
+    			append_dev(div1, h11);
+    			append_dev(div4, t7);
+    			append_dev(div4, div2);
+    			append_dev(div2, h42);
+    			append_dev(div2, t9);
+    			append_dev(div2, h12);
+    			append_dev(div4, t11);
+    			append_dev(div4, div3);
+    			append_dev(div3, h43);
+    			append_dev(div3, t13);
+    			append_dev(div3, h13);
+    			append_dev(div4, t15);
+    			append_dev(div4, button);
+    			append_dev(button, span);
+    			append_dev(button, t17);
+    			append_dev(button, svg);
+    			append_dev(svg, path);
+    			append_dev(div4, t18);
+
+    			if (!mounted) {
+    				dispose = listen_dev(button, "click", click_handler, false, false, false);
+    				mounted = true;
+    			}
+    		},
+    		p: function update(new_ctx, dirty) {
+    			ctx = new_ctx;
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(div4);
+    			mounted = false;
+    			dispose();
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_each_block_1.name,
+    		type: "each",
+    		source: "(140:6) {#each Object.entries(items) as [id, service]}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (117:31)      <div       class="w-48 h-48 flex flex-col items-center justify-center space-y-4 cursor-pointer p-4 rounded-2xl border-2 border-dotted border-stone-300 text-stone-500 bg-white shadow-sm group hover:shadow-md">       <svg         class="animate-spin -ml-1 mr-3 h-5 w-5 text-stone-500"         xmlns="http://www.w3.org/2000/svg"         fill="none"         viewBox="0 0 24 24">         <circle           class="opacity-25"           cx="12"           cy="12"           r="10"           stroke="currentColor"           stroke-width="4" />         <path           class="opacity-75"           fill="currentColor"           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />       </svg>     </div>   {:then items}
+    function create_pending_block_1(ctx) {
+    	let div;
+    	let svg;
+    	let circle;
+    	let path;
+
+    	const block = {
+    		c: function create() {
+    			div = element("div");
+    			svg = svg_element("svg");
+    			circle = svg_element("circle");
+    			path = svg_element("path");
+    			attr_dev(circle, "class", "opacity-25");
+    			attr_dev(circle, "cx", "12");
+    			attr_dev(circle, "cy", "12");
+    			attr_dev(circle, "r", "10");
+    			attr_dev(circle, "stroke", "currentColor");
+    			attr_dev(circle, "stroke-width", "4");
+    			add_location(circle, file$9, 124, 8, 3650);
+    			attr_dev(path, "class", "opacity-75");
+    			attr_dev(path, "fill", "currentColor");
+    			attr_dev(path, "d", "M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z");
+    			add_location(path, file$9, 131, 8, 3810);
+    			attr_dev(svg, "class", "animate-spin -ml-1 mr-3 h-5 w-5 text-stone-500");
+    			attr_dev(svg, "xmlns", "http://www.w3.org/2000/svg");
+    			attr_dev(svg, "fill", "none");
+    			attr_dev(svg, "viewBox", "0 0 24 24");
+    			add_location(svg, file$9, 119, 6, 3482);
+    			attr_dev(div, "class", "w-48 h-48 flex flex-col items-center justify-center space-y-4 cursor-pointer p-4 rounded-2xl border-2 border-dotted border-stone-300 text-stone-500 bg-white shadow-sm group hover:shadow-md");
+    			add_location(div, file$9, 117, 4, 3267);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, div, anchor);
+    			append_dev(div, svg);
+    			append_dev(svg, circle);
+    			append_dev(svg, path);
+    		},
+    		p: noop$1,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(div);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_pending_block_1.name,
+    		type: "pending",
+    		source: "(117:31)      <div       class=\\\"w-48 h-48 flex flex-col items-center justify-center space-y-4 cursor-pointer p-4 rounded-2xl border-2 border-dotted border-stone-300 text-stone-500 bg-white shadow-sm group hover:shadow-md\\\">       <svg         class=\\\"animate-spin -ml-1 mr-3 h-5 w-5 text-stone-500\\\"         xmlns=\\\"http://www.w3.org/2000/svg\\\"         fill=\\\"none\\\"         viewBox=\\\"0 0 24 24\\\">         <circle           class=\\\"opacity-25\\\"           cx=\\\"12\\\"           cy=\\\"12\\\"           r=\\\"10\\\"           stroke=\\\"currentColor\\\"           stroke-width=\\\"4\\\" />         <path           class=\\\"opacity-75\\\"           fill=\\\"currentColor\\\"           d=\\\"M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z\\\" />       </svg>     </div>   {:then items}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (213:4) {#if isOpen}
+    function create_if_block$1(ctx) {
+    	let div2;
+    	let label;
+    	let span;
+    	let t1;
+    	let select;
+    	let option0;
+    	let option1;
+    	let option2;
+    	let option3;
+    	let t6;
+    	let div0;
+    	let table;
+    	let thead;
+    	let tr;
+    	let th0;
+    	let t8;
+    	let th1;
+    	let t10;
+    	let tbody;
+    	let t11;
+    	let div1;
+    	let mounted;
+    	let dispose;
+    	let each_value = Object.entries(/*plans*/ ctx[5][/*planType*/ ctx[2]]);
+    	validate_each_argument(each_value);
+    	let each_blocks = [];
+
+    	for (let i = 0; i < each_value.length; i += 1) {
+    		each_blocks[i] = create_each_block(get_each_context(ctx, each_value, i));
+    	}
+
+    	function select_block_type(ctx, dirty) {
+    		if (/*suscribeProcess*/ ctx[1]) return create_if_block_1$1;
+    		return create_else_block$1;
+    	}
+
+    	let current_block_type = select_block_type(ctx);
+    	let if_block = current_block_type(ctx);
+
+    	const block = {
+    		c: function create() {
+    			div2 = element("div");
+    			label = element("label");
+    			span = element("span");
+    			span.textContent = "Choose Plan Type";
+    			t1 = space();
+    			select = element("select");
+    			option0 = element("option");
+    			option0.textContent = "Small";
+    			option1 = element("option");
+    			option1.textContent = "Medium";
+    			option2 = element("option");
+    			option2.textContent = "Large";
+    			option3 = element("option");
+    			option3.textContent = "Xtra-Large";
+    			t6 = space();
+    			div0 = element("div");
+    			table = element("table");
+    			thead = element("thead");
+    			tr = element("tr");
+    			th0 = element("th");
+    			th0.textContent = "Particulars";
+    			t8 = space();
+    			th1 = element("th");
+    			th1.textContent = "Value";
+    			t10 = space();
+    			tbody = element("tbody");
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].c();
+    			}
+
+    			t11 = space();
+    			div1 = element("div");
+    			if_block.c();
+    			attr_dev(span, "class", "font-medium text-stone-400");
+    			add_location(span, file$9, 215, 10, 7410);
+    			option0.__value = "sm";
+    			option0.value = option0.__value;
+    			add_location(option0, file$9, 219, 12, 7672);
+    			option1.__value = "md";
+    			option1.value = option1.__value;
+    			add_location(option1, file$9, 220, 12, 7718);
+    			option2.__value = "lg";
+    			option2.value = option2.__value;
+    			add_location(option2, file$9, 221, 12, 7765);
+    			option3.__value = "xl";
+    			option3.value = option3.__value;
+    			add_location(option3, file$9, 222, 12, 7811);
+    			attr_dev(select, "class", "block w-full mt-2 rounded-md bg-stone-100 border-transparent focus:border-stone-500 focus:bg-white focus:ring-0");
+    			if (/*planType*/ ctx[2] === void 0) add_render_callback(() => /*select_change_handler*/ ctx[10].call(select));
+    			add_location(select, file$9, 216, 10, 7485);
+    			attr_dev(label, "class", "block py-4");
+    			add_location(label, file$9, 214, 8, 7373);
+    			attr_dev(th0, "class", "border-b dark:border-stone-600 p-4 pl-8 pt-0 pb-3 text-stone-400 dark:text-stone-200 text-left");
+    			add_location(th0, file$9, 229, 16, 8064);
+    			attr_dev(th1, "class", "border-b dark:border-stone-600 p-4 pt-0 pb-3 text-stone-400 dark:text-stone-200 text-left");
+    			add_location(th1, file$9, 232, 16, 8241);
+    			add_location(tr, file$9, 228, 14, 8043);
+    			add_location(thead, file$9, 227, 12, 8021);
+    			attr_dev(tbody, "class", "bg-white dark:bg-stone-800");
+    			add_location(tbody, file$9, 237, 12, 8444);
+    			attr_dev(table, "class", "border-collapse table-auto w-full text-sm");
+    			add_location(table, file$9, 226, 10, 7951);
+    			attr_dev(div0, "class", "max-h-64 overflow-y-scroll my-8");
+    			add_location(div0, file$9, 225, 8, 7895);
+    			attr_dev(div1, "class", "flex flex-col items-center justify-center space-y-2");
+    			add_location(div1, file$9, 258, 8, 9367);
+    			attr_dev(div2, "class", "max-w-md space-y-4");
+    			add_location(div2, file$9, 213, 6, 7332);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, div2, anchor);
+    			append_dev(div2, label);
+    			append_dev(label, span);
+    			append_dev(label, t1);
+    			append_dev(label, select);
+    			append_dev(select, option0);
+    			append_dev(select, option1);
+    			append_dev(select, option2);
+    			append_dev(select, option3);
+    			select_option(select, /*planType*/ ctx[2]);
+    			append_dev(div2, t6);
+    			append_dev(div2, div0);
+    			append_dev(div0, table);
+    			append_dev(table, thead);
+    			append_dev(thead, tr);
+    			append_dev(tr, th0);
+    			append_dev(tr, t8);
+    			append_dev(tr, th1);
+    			append_dev(table, t10);
+    			append_dev(table, tbody);
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].m(tbody, null);
+    			}
+
+    			append_dev(div2, t11);
+    			append_dev(div2, div1);
+    			if_block.m(div1, null);
+
+    			if (!mounted) {
+    				dispose = listen_dev(select, "change", /*select_change_handler*/ ctx[10]);
+    				mounted = true;
+    			}
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*planType*/ 4) {
+    				select_option(select, /*planType*/ ctx[2]);
+    			}
+
+    			if (dirty & /*planKeys, Object, plans, planType*/ 52) {
+    				each_value = Object.entries(/*plans*/ ctx[5][/*planType*/ ctx[2]]);
+    				validate_each_argument(each_value);
+    				let i;
+
+    				for (i = 0; i < each_value.length; i += 1) {
+    					const child_ctx = get_each_context(ctx, each_value, i);
+
+    					if (each_blocks[i]) {
+    						each_blocks[i].p(child_ctx, dirty);
+    					} else {
+    						each_blocks[i] = create_each_block(child_ctx);
+    						each_blocks[i].c();
+    						each_blocks[i].m(tbody, null);
+    					}
+    				}
+
+    				for (; i < each_blocks.length; i += 1) {
+    					each_blocks[i].d(1);
+    				}
+
+    				each_blocks.length = each_value.length;
+    			}
+
+    			if (current_block_type === (current_block_type = select_block_type(ctx)) && if_block) {
+    				if_block.p(ctx, dirty);
+    			} else {
+    				if_block.d(1);
+    				if_block = current_block_type(ctx);
+
+    				if (if_block) {
+    					if_block.c();
+    					if_block.m(div1, null);
+    				}
+    			}
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(div2);
+    			destroy_each(each_blocks, detaching);
+    			if_block.d();
+    			mounted = false;
+    			dispose();
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block$1.name,
+    		type: "if",
+    		source: "(213:4) {#if isOpen}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (239:14) {#each Object.entries(plans[planType]) as item}
+    function create_each_block(ctx) {
+    	let tr;
+    	let td0;
+    	let div1;
+    	let div0;
+    	let t0_value = /*planKeys*/ ctx[4][/*item*/ ctx[16][0]].name + "";
+    	let t0;
+    	let div0_title_value;
+    	let t1;
+    	let td1;
+    	let t2_value = /*item*/ ctx[16][1] + "";
+    	let t2;
+    	let td1_title_value;
+    	let t3;
+
+    	const block = {
+    		c: function create() {
+    			tr = element("tr");
+    			td0 = element("td");
+    			div1 = element("div");
+    			div0 = element("div");
+    			t0 = text(t0_value);
+    			t1 = space();
+    			td1 = element("td");
+    			t2 = text(t2_value);
+    			t3 = space();
+    			attr_dev(div0, "class", "font-bold");
+    			attr_dev(div0, "title", div0_title_value = /*planKeys*/ ctx[4][/*item*/ ctx[16][0]].description);
+    			add_location(div0, file$9, 243, 22, 8795);
+    			attr_dev(div1, "class", "flex flex-col items-start");
+    			add_location(div1, file$9, 242, 20, 8733);
+    			attr_dev(td0, "class", "border-b border-stone-100 dark:border-stone-700 p-4 pl-8 text-stone-500 dark:text-stone-400");
+    			add_location(td0, file$9, 240, 18, 8588);
+    			attr_dev(td1, "class", "w-max border-b border-stone-100 dark:border-stone-700 p-4 text-stone-500 dark:text-stone-400 font-bold");
+    			attr_dev(td1, "title", td1_title_value = /*planKeys*/ ctx[4][/*item*/ ctx[16][0]].description);
+    			add_location(td1, file$9, 250, 18, 9052);
+    			add_location(tr, file$9, 239, 16, 8565);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, tr, anchor);
+    			append_dev(tr, td0);
+    			append_dev(td0, div1);
+    			append_dev(div1, div0);
+    			append_dev(div0, t0);
+    			append_dev(tr, t1);
+    			append_dev(tr, td1);
+    			append_dev(td1, t2);
+    			append_dev(tr, t3);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*planType*/ 4 && t0_value !== (t0_value = /*planKeys*/ ctx[4][/*item*/ ctx[16][0]].name + "")) set_data_dev(t0, t0_value);
+
+    			if (dirty & /*planType*/ 4 && div0_title_value !== (div0_title_value = /*planKeys*/ ctx[4][/*item*/ ctx[16][0]].description)) {
+    				attr_dev(div0, "title", div0_title_value);
+    			}
+
+    			if (dirty & /*planType*/ 4 && t2_value !== (t2_value = /*item*/ ctx[16][1] + "")) set_data_dev(t2, t2_value);
+
+    			if (dirty & /*planType*/ 4 && td1_title_value !== (td1_title_value = /*planKeys*/ ctx[4][/*item*/ ctx[16][0]].description)) {
+    				attr_dev(td1, "title", td1_title_value);
+    			}
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(tr);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_each_block.name,
+    		type: "each",
+    		source: "(239:14) {#each Object.entries(plans[planType]) as item}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (329:10) {:else}
+    function create_else_block$1(ctx) {
+    	let button;
+    	let mounted;
+    	let dispose;
+
+    	const block = {
+    		c: function create() {
+    			button = element("button");
+    			button.textContent = "Suscribe";
+    			attr_dev(button, "type", "button");
+    			attr_dev(button, "class", "inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-white bg-green-500 hover:bg-green-400 transition ease-in-out duration-150");
+    			add_location(button, file$9, 329, 12, 12490);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, button, anchor);
+
+    			if (!mounted) {
+    				dispose = listen_dev(button, "click", /*click_handler_2*/ ctx[11], false, false, false);
+    				mounted = true;
+    			}
+    		},
+    		p: noop$1,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(button);
+    			mounted = false;
+    			dispose();
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_else_block$1.name,
+    		type: "else",
+    		source: "(329:10) {:else}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (260:10) {#if suscribeProcess}
+    function create_if_block_1$1(ctx) {
+    	let await_block_anchor;
+
+    	let info = {
+    		ctx,
+    		current: null,
+    		token: null,
+    		hasCatch: true,
+    		pending: create_pending_block,
+    		then: create_then_block,
+    		catch: create_catch_block,
+    		value: 14,
+    		error: 15
+    	};
+
+    	handle_promise(/*suscribePromise*/ ctx[6](), info);
+
+    	const block = {
+    		c: function create() {
+    			await_block_anchor = empty();
+    			info.block.c();
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, await_block_anchor, anchor);
+    			info.block.m(target, info.anchor = anchor);
+    			info.mount = () => await_block_anchor.parentNode;
+    			info.anchor = await_block_anchor;
+    		},
+    		p: function update(new_ctx, dirty) {
+    			ctx = new_ctx;
+    			update_await_block_branch(info, ctx, dirty);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(await_block_anchor);
+    			info.block.d(detaching);
+    			info.token = null;
+    			info = null;
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block_1$1.name,
+    		type: "if",
+    		source: "(260:10) {#if suscribeProcess}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (305:12) {:catch error}
+    function create_catch_block(ctx) {
+    	let button;
+    	let svg;
+    	let circle;
+    	let path;
+    	let t0;
+    	let t1_value = /*error*/ ctx[15] + "";
+    	let t1;
+
+    	const block = {
+    		c: function create() {
+    			button = element("button");
+    			svg = svg_element("svg");
+    			circle = svg_element("circle");
+    			path = svg_element("path");
+    			t0 = text("\n                Retry : ");
+    			t1 = text(t1_value);
+    			attr_dev(circle, "class", "opacity-25");
+    			attr_dev(circle, "cx", "12");
+    			attr_dev(circle, "cy", "12");
+    			attr_dev(circle, "r", "10");
+    			attr_dev(circle, "stroke", "currentColor");
+    			attr_dev(circle, "stroke-width", "4");
+    			add_location(circle, file$9, 313, 18, 11906);
+    			attr_dev(path, "class", "opacity-75");
+    			attr_dev(path, "fill", "currentColor");
+    			attr_dev(path, "d", "M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z");
+    			add_location(path, file$9, 320, 18, 12136);
+    			attr_dev(svg, "class", "animate-spin -ml-1 mr-3 h-5 w-5 text-white");
+    			attr_dev(svg, "xmlns", "http://www.w3.org/2000/svg");
+    			attr_dev(svg, "fill", "none");
+    			attr_dev(svg, "viewBox", "0 0 24 24");
+    			add_location(svg, file$9, 308, 16, 11692);
+    			attr_dev(button, "type", "button");
+    			attr_dev(button, "class", "inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-white bg-red-500 hover:bg-red-400 transition ease-in-out duration-150");
+    			add_location(button, file$9, 305, 14, 11453);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, button, anchor);
+    			append_dev(button, svg);
+    			append_dev(svg, circle);
+    			append_dev(svg, path);
+    			append_dev(button, t0);
+    			append_dev(button, t1);
+    		},
+    		p: noop$1,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(button);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_catch_block.name,
+    		type: "catch",
+    		source: "(305:12) {:catch error}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (285:12) {:then value}
+    function create_then_block(ctx) {
+    	let button;
+    	let svg;
+    	let path;
+    	let t0;
+    	let t1;
+    	let span;
+    	let t2_value = /*value*/ ctx[14].message + "";
+    	let t2;
+
+    	const block = {
+    		c: function create() {
+    			button = element("button");
+    			svg = svg_element("svg");
+    			path = svg_element("path");
+    			t0 = text("\n                Suscribed");
+    			t1 = space();
+    			span = element("span");
+    			t2 = text(t2_value);
+    			attr_dev(path, "stroke-linecap", "round");
+    			attr_dev(path, "stroke-linejoin", "round");
+    			attr_dev(path, "stroke-width", "2");
+    			attr_dev(path, "d", "M5 13l4 4L19 7");
+    			add_location(path, file$9, 295, 18, 11124);
+    			attr_dev(svg, "xmlns", "http://www.w3.org/2000/svg");
+    			attr_dev(svg, "class", "-ml-1 mr-3 h-5 w-5 text-white");
+    			attr_dev(svg, "fill", "none");
+    			attr_dev(svg, "viewBox", "0 0 24 24");
+    			attr_dev(svg, "stroke", "currentColor");
+    			add_location(svg, file$9, 289, 16, 10883);
+    			attr_dev(button, "type", "button");
+    			attr_dev(button, "class", "inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-white bg-green-500 hover:bg-green-400 transition ease-in-out duration-150 cursor-not-allowed");
+    			button.disabled = "";
+    			add_location(button, file$9, 285, 14, 10593);
+    			add_location(span, file$9, 303, 14, 11383);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, button, anchor);
+    			append_dev(button, svg);
+    			append_dev(svg, path);
+    			append_dev(button, t0);
+    			insert_dev(target, t1, anchor);
+    			insert_dev(target, span, anchor);
+    			append_dev(span, t2);
+    		},
+    		p: noop$1,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(button);
+    			if (detaching) detach_dev(t1);
+    			if (detaching) detach_dev(span);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_then_block.name,
+    		type: "then",
+    		source: "(285:12) {:then value}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (261:38)                <button                 type="button"                 class="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-white bg-green-500 hover:bg-green-400 transition ease-in-out duration-150 cursor-not-allowed"                 disabled="">                 <svg                   class="animate-spin -ml-1 mr-3 h-5 w-5 text-white"                   xmlns="http://www.w3.org/2000/svg"                   fill="none"                   viewBox="0 0 24 24">                   <circle                     class="opacity-25"                     cx="12"                     cy="12"                     r="10"                     stroke="currentColor"                     stroke-width="4" />                   <path                     class="opacity-75"                     fill="currentColor"                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />                 </svg>                 Suscribing...               </button>             {:then value}
+    function create_pending_block(ctx) {
+    	let button;
+    	let svg;
+    	let circle;
+    	let path;
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			button = element("button");
+    			svg = svg_element("svg");
+    			circle = svg_element("circle");
+    			path = svg_element("path");
+    			t = text("\n                Suscribing...");
+    			attr_dev(circle, "class", "opacity-25");
+    			attr_dev(circle, "cx", "12");
+    			attr_dev(circle, "cy", "12");
+    			attr_dev(circle, "r", "10");
+    			attr_dev(circle, "stroke", "currentColor");
+    			attr_dev(circle, "stroke-width", "4");
+    			add_location(circle, file$9, 270, 18, 10022);
+    			attr_dev(path, "class", "opacity-75");
+    			attr_dev(path, "fill", "currentColor");
+    			attr_dev(path, "d", "M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z");
+    			add_location(path, file$9, 277, 18, 10252);
+    			attr_dev(svg, "class", "animate-spin -ml-1 mr-3 h-5 w-5 text-white");
+    			attr_dev(svg, "xmlns", "http://www.w3.org/2000/svg");
+    			attr_dev(svg, "fill", "none");
+    			attr_dev(svg, "viewBox", "0 0 24 24");
+    			add_location(svg, file$9, 265, 16, 9808);
+    			attr_dev(button, "type", "button");
+    			attr_dev(button, "class", "inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-white bg-green-500 hover:bg-green-400 transition ease-in-out duration-150 cursor-not-allowed");
+    			button.disabled = "";
+    			add_location(button, file$9, 261, 14, 9518);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, button, anchor);
+    			append_dev(button, svg);
+    			append_dev(svg, circle);
+    			append_dev(svg, path);
+    			append_dev(button, t);
+    		},
+    		p: noop$1,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(button);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_pending_block.name,
+    		type: "pending",
+    		source: "(261:38)                <button                 type=\\\"button\\\"                 class=\\\"inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-white bg-green-500 hover:bg-green-400 transition ease-in-out duration-150 cursor-not-allowed\\\"                 disabled=\\\"\\\">                 <svg                   class=\\\"animate-spin -ml-1 mr-3 h-5 w-5 text-white\\\"                   xmlns=\\\"http://www.w3.org/2000/svg\\\"                   fill=\\\"none\\\"                   viewBox=\\\"0 0 24 24\\\">                   <circle                     class=\\\"opacity-25\\\"                     cx=\\\"12\\\"                     cy=\\\"12\\\"                     r=\\\"10\\\"                     stroke=\\\"currentColor\\\"                     stroke-width=\\\"4\\\" />                   <path                     class=\\\"opacity-75\\\"                     fill=\\\"currentColor\\\"                     d=\\\"M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z\\\" />                 </svg>                 Suscribing...               </button>             {:then value}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function create_fragment$9(ctx) {
+    	let div3;
+    	let t0;
+    	let div2;
+    	let div1;
+    	let div0;
+    	let t2;
+    	let svg;
+    	let path;
+    	let t3;
+    	let mounted;
+    	let dispose;
+
+    	let info = {
+    		ctx,
+    		current: null,
+    		token: null,
+    		hasCatch: true,
+    		pending: create_pending_block_1,
+    		then: create_then_block_1,
+    		catch: create_catch_block_1,
+    		value: 19
+    	};
+
+    	handle_promise(/*getServicesPromise*/ ctx[7](), info);
+    	let if_block = /*isOpen*/ ctx[0] && create_if_block$1(ctx);
 
     	const block = {
     		c: function create() {
     			div3 = element("div");
-    			create_component(menu.$$.fragment);
+    			info.block.c();
     			t0 = space();
-    			main = element("main");
-    			header = element("header");
-    			div0 = element("div");
-    			h1 = element("h1");
-    			h1.textContent = "API Details";
-    			t2 = space();
     			div2 = element("div");
     			div1 = element("div");
-    			span0 = element("span");
-    			span0.textContent = "API key";
-    			t4 = space();
-    			span1 = element("span");
-    			t5 = text(t5_value);
-    			t6 = space();
-    			svg0 = svg_element("svg");
-    			path0 = svg_element("path");
-    			path1 = svg_element("path");
-    			t7 = space();
-    			span2 = element("span");
-    			span2.textContent = "Public key";
-    			t9 = space();
-    			span3 = element("span");
-    			t10 = text(t10_value);
-    			t11 = space();
-    			svg1 = svg_element("svg");
-    			path2 = svg_element("path");
-    			path3 = svg_element("path");
-    			attr_dev(h1, "class", "text-2xl font-bold text-gray-700");
-    			add_location(h1, file$7, 35, 8, 905);
-    			attr_dev(div0, "class", "max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8");
-    			add_location(div0, file$7, 34, 6, 839);
-    			attr_dev(header, "class", "bg-white shadow");
-    			add_location(header, file$7, 33, 4, 799);
-    			attr_dev(span0, "class", "m-2 col-span-1 justify-self-end self-center text-stone-600");
-    			add_location(span0, file$7, 42, 8, 1211);
-    			attr_dev(path0, "d", "M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z");
-    			add_location(path0, file$7, 53, 12, 1798);
-    			attr_dev(path1, "d", "M5 3a2 2 0 00-2 2v6a2 2 0 002 2V5h8a2 2 0 00-2-2H5z");
-    			add_location(path1, file$7, 55, 12, 1901);
-    			attr_dev(svg0, "xmlns", "http://www.w3.org/2000/svg");
-    			attr_dev(svg0, "class", "ml-2 h-6 w-6 text-stone-300 hover:text-stone-500 cursor-pointer");
-    			attr_dev(svg0, "viewBox", "0 0 20 20");
-    			attr_dev(svg0, "fill", "currentColor");
-    			add_location(svg0, file$7, 47, 10, 1536);
-    			attr_dev(span1, "class", "w-fit col-span-1 px-4 py-2 m-2 border border-stone-200 bg-stone-50 rounded-md shadow-inner text-stone-500 font-mono font-bold inline-flex");
-    			add_location(span1, file$7, 44, 8, 1318);
-    			attr_dev(span2, "class", "m-2 col-span-1 justify-self-end self-center text-stone-600");
-    			add_location(span2, file$7, 58, 8, 2007);
-    			attr_dev(path2, "d", "M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z");
-    			add_location(path2, file$7, 69, 12, 2603);
-    			attr_dev(path3, "d", "M5 3a2 2 0 00-2 2v6a2 2 0 002 2V5h8a2 2 0 00-2-2H5z");
-    			add_location(path3, file$7, 71, 12, 2706);
-    			attr_dev(svg1, "xmlns", "http://www.w3.org/2000/svg");
-    			attr_dev(svg1, "class", "ml-2 h-6 w-6 text-stone-300 hover:text-stone-500 cursor-pointer");
-    			attr_dev(svg1, "viewBox", "0 0 20 20");
-    			attr_dev(svg1, "fill", "currentColor");
-    			add_location(svg1, file$7, 63, 10, 2338);
-    			attr_dev(span3, "class", "w-fit col-span-1 px-4 py-2 m-2 border border-stone-200 bg-stone-50 rounded-md shadow-inner text-stone-500 font-mono font-bold inline-flex");
-    			add_location(span3, file$7, 60, 8, 2117);
-    			attr_dev(div1, "class", "mt-8 font-sans grid grid-cols-[repeat(2,_max-content)] items-start justify-items-start");
-    			add_location(div1, file$7, 40, 6, 1094);
-    			attr_dev(div2, "class", "w-4/5 mx-auto py-6 sm:px-6 lg:px-8");
-    			add_location(div2, file$7, 38, 4, 998);
-    			attr_dev(main, "class", "w-full h-full pt-[78px]");
-    			add_location(main, file$7, 32, 2, 756);
-    			attr_dev(div3, "class", "relative w-full flex flex-row min-h-full text-stone-700");
-    			add_location(div3, file$7, 29, 0, 672);
+    			div0 = element("div");
+    			div0.textContent = "Add Service";
+    			t2 = space();
+    			svg = svg_element("svg");
+    			path = svg_element("path");
+    			t3 = space();
+    			if (if_block) if_block.c();
+    			attr_dev(div0, "class", "font-sans");
+    			add_location(div0, file$9, 200, 6, 6857);
+    			attr_dev(path, "fill-rule", "evenodd");
+    			attr_dev(path, "d", "M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z");
+    			attr_dev(path, "clip-rule", "evenodd");
+    			add_location(path, file$9, 206, 8, 7116);
+    			attr_dev(svg, "xmlns", "http://www.w3.org/2000/svg");
+    			attr_dev(svg, "class", "h-5 w-5 group-hover:bg-stone-300/40 rounded-lg group-hover:rotate-45 transform-gpu");
+    			attr_dev(svg, "viewBox", "0 0 20 20");
+    			attr_dev(svg, "fill", "currentColor");
+    			add_location(svg, file$9, 201, 6, 6904);
+    			attr_dev(div1, "class", "w-full flex flex-row items-center justify-between space-x-2");
+    			add_location(div1, file$9, 194, 4, 6679);
+    			attr_dev(div2, "class", "flex flex-col justify-evenly space-y-4 cursor-pointer p-4 rounded-2xl border-2 border-dotted border-stone-300 text-stone-500 bg-white shadow-sm group hover:shadow-md");
+    			add_location(div2, file$9, 192, 2, 6490);
+    			attr_dev(div3, "class", "w-full h-full grid grid-flow-row-dense grid-cols-[repeat(auto-fill,_minmax(20rem,_1fr))] gap-4 content-between items-start justify-items-start");
+    			add_location(div3, file$9, 114, 0, 3072);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div3, anchor);
-    			mount_component(menu, div3, null);
+    			info.block.m(div3, info.anchor = null);
+    			info.mount = () => div3;
+    			info.anchor = t0;
     			append_dev(div3, t0);
-    			append_dev(div3, main);
-    			append_dev(main, header);
-    			append_dev(header, div0);
-    			append_dev(div0, h1);
-    			append_dev(main, t2);
-    			append_dev(main, div2);
+    			append_dev(div3, div2);
     			append_dev(div2, div1);
-    			append_dev(div1, span0);
-    			append_dev(div1, t4);
-    			append_dev(div1, span1);
-    			append_dev(span1, t5);
-    			append_dev(span1, t6);
-    			append_dev(span1, svg0);
-    			append_dev(svg0, path0);
-    			append_dev(svg0, path1);
-    			append_dev(div1, t7);
-    			append_dev(div1, span2);
-    			append_dev(div1, t9);
-    			append_dev(div1, span3);
-    			append_dev(span3, t10);
-    			append_dev(span3, t11);
-    			append_dev(span3, svg1);
-    			append_dev(svg1, path2);
-    			append_dev(svg1, path3);
-    			current = true;
+    			append_dev(div1, div0);
+    			append_dev(div1, t2);
+    			append_dev(div1, svg);
+    			append_dev(svg, path);
+    			append_dev(div2, t3);
+    			if (if_block) if_block.m(div2, null);
 
     			if (!mounted) {
-    				dispose = [
-    					listen_dev(
-    						svg0,
-    						"click",
-    						function () {
-    							if (is_function(/*writeToClipboard*/ ctx[2](/*$apikey*/ ctx[0]))) /*writeToClipboard*/ ctx[2](/*$apikey*/ ctx[0]).apply(this, arguments);
-    						},
-    						false,
-    						false,
-    						false
-    					),
-    					listen_dev(
-    						svg1,
-    						"click",
-    						function () {
-    							if (is_function(/*writeToClipboard*/ ctx[2](/*$publickey*/ ctx[1]))) /*writeToClipboard*/ ctx[2](/*$publickey*/ ctx[1]).apply(this, arguments);
-    						},
-    						false,
-    						false,
-    						false
-    					)
-    				];
-
+    				dispose = listen_dev(div1, "click", /*click_handler_1*/ ctx[9], false, false, false);
     				mounted = true;
     			}
     		},
     		p: function update(new_ctx, [dirty]) {
     			ctx = new_ctx;
-    			if ((!current || dirty & /*$apikey*/ 1) && t5_value !== (t5_value = (/*$apikey*/ ctx[0] || "api key unavailable") + "")) set_data_dev(t5, t5_value);
-    			if ((!current || dirty & /*$publickey*/ 2) && t10_value !== (t10_value = (/*$publickey*/ ctx[1] || "api key unavailable") + "")) set_data_dev(t10, t10_value);
+    			update_await_block_branch(info, ctx, dirty);
+
+    			if (/*isOpen*/ ctx[0]) {
+    				if (if_block) {
+    					if_block.p(ctx, dirty);
+    				} else {
+    					if_block = create_if_block$1(ctx);
+    					if_block.c();
+    					if_block.m(div2, null);
+    				}
+    			} else if (if_block) {
+    				if_block.d(1);
+    				if_block = null;
+    			}
+    		},
+    		i: noop$1,
+    		o: noop$1,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(div3);
+    			info.block.d();
+    			info.token = null;
+    			info = null;
+    			if (if_block) if_block.d();
+    			mounted = false;
+    			dispose();
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_fragment$9.name,
+    		type: "component",
+    		source: "",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function instance$9($$self, $$props, $$invalidate) {
+    	let $user;
+    	validate_store(user, 'user');
+    	component_subscribe($$self, user, $$value => $$invalidate(12, $user = $$value));
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots('Services', slots, []);
+    	const navigate = useNavigate();
+
+    	let isOpen = false,
+    		suscribeProcess = false,
+    		planType = "sm",
+    		planKeys = {
+    			name: { name: "Plan", description: "Plan Name" },
+    			max_consumers: {
+    				name: "Max Consumers",
+    				description: 'Consumers are users consuming the livestream of video/audio. For eg. In a room of 24 users, only one user producing video/audio, therefore consumers count for this scenario are 23 other users who are "CONSUMING" the live-stream of the single user.'
+    			},
+    			max_producers: {
+    				name: "Max Active Users",
+    				description: "Users who's audio & video is being shown to other users in the room. These users can interact with other active users, in the room through audio or video."
+    			},
+    			usage_cost: {
+    				name: "Usage cost",
+    				description: "Calculated based on peak number of consumers handled by the room session and length of the room session."
+    			},
+    			monthly_charge: {
+    				name: "Recurring Monthly Charge",
+    				description: "Fixed charge, billed each month."
+    			}
+    		};
+
+    	const plans = {
+    		sm: {
+    			name: "Small",
+    			max_consumers: 24,
+    			max_producers: 4,
+    			usage_cost: "$0.0002/consumer/min",
+    			monthly_charge: "$1"
+    		},
+    		md: {
+    			name: "Medium",
+    			max_consumers: 112,
+    			max_producers: 8,
+    			usage_cost: "$0.0002/consumer/min",
+    			monthly_charge: "$1 + ( 0.5% * extra usage cost )"
+    		},
+    		lg: {
+    			name: "Large",
+    			max_consumers: 760,
+    			max_producers: 20,
+    			usage_cost: "$0.0001/consumer/min",
+    			monthly_charge: "$9 + ( 0.5% * extra usage cost )"
+    		},
+    		xl: {
+    			name: "X-Large",
+    			max_consumers: 3120,
+    			max_producers: 40,
+    			usage_cost: "$0.0001/consumer/min",
+    			monthly_charge: "$99 + ( 0.5% * extra usage cost )"
+    		}
+    	};
+
+    	console.log($user);
+    	let services = [];
+
+    	const suscribePromise = () => {
+    		return new Promise((resolve, reject) => {
+    				fetch("http://localhost:8080/service", {
+    					method: "POST",
+    					headers: { "Content-Type": "application/json" },
+    					body: JSON.stringify({
+    						plan: plans[planType].name,
+    						uid: $user.uid
+    					})
+    				}).then(res => {
+    					res.json().then(value => {
+    						console.log(value);
+    						resolve(value);
+    					});
+    				}).catch(res => {
+    					reject(res.json());
+    				});
+    			});
+    	};
+
+    	const getServicesPromise = () => {
+    		return new Promise((resolve, reject) => {
+    				fetch(`http://localhost:8080/service/${$user.uid}`, { method: "GET" }).then(res => {
+    					console.log(res);
+
+    					res.json().then(value => {
+    						console.log(value);
+    						resolve(value);
+    					});
+    				}).catch(res => {
+    					console.error(res);
+    					reject(res);
+    				});
+    			});
+    	};
+
+    	const writable_props = [];
+
+    	Object_1.keys($$props).forEach(key => {
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1.warn(`<Services> was created with unknown prop '${key}'`);
+    	});
+
+    	const click_handler = id => navigate(`/${id}`);
+
+    	const click_handler_1 = () => {
+    		$$invalidate(0, isOpen = !isOpen);
+    		$$invalidate(1, suscribeProcess = false);
+    	};
+
+    	function select_change_handler() {
+    		planType = select_value(this);
+    		$$invalidate(2, planType);
+    	}
+
+    	const click_handler_2 = () => $$invalidate(1, suscribeProcess = !suscribeProcess);
+
+    	$$self.$capture_state = () => ({
+    		user,
+    		useNavigate,
+    		navigate,
+    		isOpen,
+    		suscribeProcess,
+    		planType,
+    		planKeys,
+    		plans,
+    		services,
+    		suscribePromise,
+    		getServicesPromise,
+    		$user
+    	});
+
+    	$$self.$inject_state = $$props => {
+    		if ('isOpen' in $$props) $$invalidate(0, isOpen = $$props.isOpen);
+    		if ('suscribeProcess' in $$props) $$invalidate(1, suscribeProcess = $$props.suscribeProcess);
+    		if ('planType' in $$props) $$invalidate(2, planType = $$props.planType);
+    		if ('planKeys' in $$props) $$invalidate(4, planKeys = $$props.planKeys);
+    		if ('services' in $$props) services = $$props.services;
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	return [
+    		isOpen,
+    		suscribeProcess,
+    		planType,
+    		navigate,
+    		planKeys,
+    		plans,
+    		suscribePromise,
+    		getServicesPromise,
+    		click_handler,
+    		click_handler_1,
+    		select_change_handler,
+    		click_handler_2
+    	];
+    }
+
+    class Services extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+    		init(this, options, instance$9, create_fragment$9, safe_not_equal, {});
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "Services",
+    			options,
+    			id: create_fragment$9.name
+    		});
+    	}
+    }
+
+    /* src/pages/Service.svelte generated by Svelte v3.45.0 */
+    const file$8 = "src/pages/Service.svelte";
+
+    // (10:4) <Link class="text-xs hover:text-green-500" to="/">
+    function create_default_slot_1$2(ctx) {
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			t = text("Services");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t, anchor);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(t);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot_1$2.name,
+    		type: "slot",
+    		source: "(10:4) <Link class=\\\"text-xs hover:text-green-500\\\" to=\\\"/\\\">",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (21:4) <Link class="text-xs hover:text-green-500" to={`/${id}`}>
+    function create_default_slot$2(ctx) {
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			t = text(/*id*/ ctx[0]);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t, anchor);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*id*/ 1) set_data_dev(t, /*id*/ ctx[0]);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(t);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot$2.name,
+    		type: "slot",
+    		source: "(21:4) <Link class=\\\"text-xs hover:text-green-500\\\" to={`/${id}`}>",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function create_fragment$8(ctx) {
+    	let div1;
+    	let nav;
+    	let link0;
+    	let t0;
+    	let svg;
+    	let path;
+    	let t1;
+    	let link1;
+    	let t2;
+    	let div0;
+    	let current;
+
+    	link0 = new Link$1({
+    			props: {
+    				class: "text-xs hover:text-green-500",
+    				to: "/",
+    				$$slots: { default: [create_default_slot_1$2] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	link1 = new Link$1({
+    			props: {
+    				class: "text-xs hover:text-green-500",
+    				to: `/${/*id*/ ctx[0]}`,
+    				$$slots: { default: [create_default_slot$2] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	const block = {
+    		c: function create() {
+    			div1 = element("div");
+    			nav = element("nav");
+    			create_component(link0.$$.fragment);
+    			t0 = space();
+    			svg = svg_element("svg");
+    			path = svg_element("path");
+    			t1 = space();
+    			create_component(link1.$$.fragment);
+    			t2 = space();
+    			div0 = element("div");
+    			attr_dev(path, "fill-rule", "evenodd");
+    			attr_dev(path, "d", "M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z");
+    			attr_dev(path, "clip-rule", "evenodd");
+    			add_location(path, file$8, 15, 6, 399);
+    			attr_dev(svg, "xmlns", "http://www.w3.org/2000/svg");
+    			attr_dev(svg, "class", "h-4 w-4");
+    			attr_dev(svg, "viewBox", "0 0 20 20");
+    			attr_dev(svg, "fill", "currentColor");
+    			add_location(svg, file$8, 10, 4, 272);
+    			attr_dev(nav, "class", "py-4 flex flex-row items-center justify-evenly space-x-2");
+    			add_location(nav, file$8, 7, 2, 123);
+    			attr_dev(div0, "class", "");
+    			add_location(div0, file$8, 22, 2, 686);
+    			attr_dev(div1, "class", "flex flex-col items-start");
+    			add_location(div1, file$8, 6, 0, 81);
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, div1, anchor);
+    			append_dev(div1, nav);
+    			mount_component(link0, nav, null);
+    			append_dev(nav, t0);
+    			append_dev(nav, svg);
+    			append_dev(svg, path);
+    			append_dev(nav, t1);
+    			mount_component(link1, nav, null);
+    			append_dev(div1, t2);
+    			append_dev(div1, div0);
+    			current = true;
+    		},
+    		p: function update(ctx, [dirty]) {
+    			const link0_changes = {};
+
+    			if (dirty & /*$$scope*/ 2) {
+    				link0_changes.$$scope = { dirty, ctx };
+    			}
+
+    			link0.$set(link0_changes);
+    			const link1_changes = {};
+    			if (dirty & /*id*/ 1) link1_changes.to = `/${/*id*/ ctx[0]}`;
+
+    			if (dirty & /*$$scope, id*/ 3) {
+    				link1_changes.$$scope = { dirty, ctx };
+    			}
+
+    			link1.$set(link1_changes);
     		},
     		i: function intro(local) {
     			if (current) return;
-    			transition_in(menu.$$.fragment, local);
+    			transition_in(link0.$$.fragment, local);
+    			transition_in(link1.$$.fragment, local);
     			current = true;
     		},
     		o: function outro(local) {
-    			transition_out(menu.$$.fragment, local);
+    			transition_out(link0.$$.fragment, local);
+    			transition_out(link1.$$.fragment, local);
     			current = false;
     		},
     		d: function destroy(detaching) {
-    			if (detaching) detach_dev(div3);
-    			destroy_component(menu);
+    			if (detaching) detach_dev(div1);
+    			destroy_component(link0);
+    			destroy_component(link1);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_fragment$8.name,
+    		type: "component",
+    		source: "",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function instance$8($$self, $$props, $$invalidate) {
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots('Service', slots, []);
+    	let { id } = $$props;
+    	const writable_props = ['id'];
+
+    	Object.keys($$props).forEach(key => {
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console.warn(`<Service> was created with unknown prop '${key}'`);
+    	});
+
+    	$$self.$$set = $$props => {
+    		if ('id' in $$props) $$invalidate(0, id = $$props.id);
+    	};
+
+    	$$self.$capture_state = () => ({ Link: Link$1, id });
+
+    	$$self.$inject_state = $$props => {
+    		if ('id' in $$props) $$invalidate(0, id = $$props.id);
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	return [id];
+    }
+
+    class Service extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+    		init(this, options, instance$8, create_fragment$8, safe_not_equal, { id: 0 });
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "Service",
+    			options,
+    			id: create_fragment$8.name
+    		});
+
+    		const { ctx } = this.$$;
+    		const props = options.props || {};
+
+    		if (/*id*/ ctx[0] === undefined && !('id' in props)) {
+    			console.warn("<Service> was created without expected prop 'id'");
+    		}
+    	}
+
+    	get id() {
+    		throw new Error("<Service>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set id(value) {
+    		throw new Error("<Service>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+    }
+
+    /* src/pages/Dashboard.svelte generated by Svelte v3.45.0 */
+    const file$7 = "src/pages/Dashboard.svelte";
+
+    // (34:8) <Link to="/">
+    function create_default_slot_4$1(ctx) {
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			t = text("Services");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t, anchor);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(t);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot_4$1.name,
+    		type: "slot",
+    		source: "(34:8) <Link to=\\\"/\\\">",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (52:8) <Link to="account">
+    function create_default_slot_3$1(ctx) {
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			t = text("Account");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t, anchor);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(t);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot_3$1.name,
+    		type: "slot",
+    		source: "(52:8) <Link to=\\\"account\\\">",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (69:6) <Link to="#">
+    function create_default_slot_2$1(ctx) {
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			t = text("Logout");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t, anchor);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(t);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot_2$1.name,
+    		type: "slot",
+    		source: "(69:6) <Link to=\\\"#\\\">",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (76:6) <Route path="/:id" let:params>
+    function create_default_slot_1$1(ctx) {
+    	let service;
+    	let current;
+
+    	service = new Service({
+    			props: { id: /*params*/ ctx[3].id },
+    			$$inline: true
+    		});
+
+    	const block = {
+    		c: function create() {
+    			create_component(service.$$.fragment);
+    		},
+    		m: function mount(target, anchor) {
+    			mount_component(service, target, anchor);
+    			current = true;
+    		},
+    		p: function update(ctx, dirty) {
+    			const service_changes = {};
+    			if (dirty & /*params*/ 8) service_changes.id = /*params*/ ctx[3].id;
+    			service.$set(service_changes);
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(service.$$.fragment, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(service.$$.fragment, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			destroy_component(service, detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot_1$1.name,
+    		type: "slot",
+    		source: "(76:6) <Route path=\\\"/:id\\\" let:params>",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (72:2) <Router>
+    function create_default_slot$1(ctx) {
+    	let main;
+    	let route0;
+    	let t0;
+    	let route1;
+    	let t1;
+    	let route2;
+    	let current;
+
+    	route0 = new Route$1({
+    			props: { path: "account", component: Account },
+    			$$inline: true
+    		});
+
+    	route1 = new Route$1({
+    			props: { path: "/", component: Services },
+    			$$inline: true
+    		});
+
+    	route2 = new Route$1({
+    			props: {
+    				path: "/:id",
+    				$$slots: {
+    					default: [
+    						create_default_slot_1$1,
+    						({ params }) => ({ 3: params }),
+    						({ params }) => params ? 8 : 0
+    					]
+    				},
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	const block = {
+    		c: function create() {
+    			main = element("main");
+    			create_component(route0.$$.fragment);
+    			t0 = space();
+    			create_component(route1.$$.fragment);
+    			t1 = space();
+    			create_component(route2.$$.fragment);
+    			attr_dev(main, "class", "w-full h-full p-8 bg-green-50");
+    			add_location(main, file$7, 72, 4, 2669);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, main, anchor);
+    			mount_component(route0, main, null);
+    			append_dev(main, t0);
+    			mount_component(route1, main, null);
+    			append_dev(main, t1);
+    			mount_component(route2, main, null);
+    			current = true;
+    		},
+    		p: function update(ctx, dirty) {
+    			const route2_changes = {};
+
+    			if (dirty & /*$$scope, params*/ 24) {
+    				route2_changes.$$scope = { dirty, ctx };
+    			}
+
+    			route2.$set(route2_changes);
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(route0.$$.fragment, local);
+    			transition_in(route1.$$.fragment, local);
+    			transition_in(route2.$$.fragment, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(route0.$$.fragment, local);
+    			transition_out(route1.$$.fragment, local);
+    			transition_out(route2.$$.fragment, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(main);
+    			destroy_component(route0);
+    			destroy_component(route1);
+    			destroy_component(route2);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot$1.name,
+    		type: "slot",
+    		source: "(72:2) <Router>",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function create_fragment$7(ctx) {
+    	let div7;
+    	let div6;
+    	let div1;
+    	let img;
+    	let img_src_value;
+    	let t0;
+    	let div0;
+    	let t2;
+    	let div4;
+    	let div2;
+    	let svg0;
+    	let path0;
+    	let t3;
+    	let link0;
+    	let t4;
+    	let div3;
+    	let svg1;
+    	let path1;
+    	let t5;
+    	let link1;
+    	let t6;
+    	let div5;
+    	let svg2;
+    	let path2;
+    	let t7;
+    	let link2;
+    	let t8;
+    	let router;
+    	let current;
+    	let mounted;
+    	let dispose;
+
+    	link0 = new Link$1({
+    			props: {
+    				to: "/",
+    				$$slots: { default: [create_default_slot_4$1] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	link1 = new Link$1({
+    			props: {
+    				to: "account",
+    				$$slots: { default: [create_default_slot_3$1] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	link2 = new Link$1({
+    			props: {
+    				to: "#",
+    				$$slots: { default: [create_default_slot_2$1] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	router = new Router$1({
+    			props: {
+    				$$slots: { default: [create_default_slot$1] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	const block = {
+    		c: function create() {
+    			div7 = element("div");
+    			div6 = element("div");
+    			div1 = element("div");
+    			img = element("img");
+    			t0 = space();
+    			div0 = element("div");
+    			div0.textContent = "6buns";
+    			t2 = space();
+    			div4 = element("div");
+    			div2 = element("div");
+    			svg0 = svg_element("svg");
+    			path0 = svg_element("path");
+    			t3 = space();
+    			create_component(link0.$$.fragment);
+    			t4 = space();
+    			div3 = element("div");
+    			svg1 = svg_element("svg");
+    			path1 = svg_element("path");
+    			t5 = space();
+    			create_component(link1.$$.fragment);
+    			t6 = space();
+    			div5 = element("div");
+    			svg2 = svg_element("svg");
+    			path2 = svg_element("path");
+    			t7 = space();
+    			create_component(link2.$$.fragment);
+    			t8 = space();
+    			create_component(router.$$.fragment);
+    			if (!src_url_equal(img.src, img_src_value = "./favicon-32x32.png")) attr_dev(img, "src", img_src_value);
+    			attr_dev(img, "class", "mr-2 w-6 h-6");
+    			attr_dev(img, "alt", "site icon");
+    			add_location(img, file$7, 13, 6, 476);
+    			attr_dev(div0, "class", "text-lg font-sans font-bold");
+    			add_location(div0, file$7, 14, 6, 553);
+    			attr_dev(div1, "class", "flex flex-row items-center justify-start p-2");
+    			add_location(div1, file$7, 12, 4, 411);
+    			attr_dev(path0, "stroke-linecap", "round");
+    			attr_dev(path0, "stroke-linejoin", "round");
+    			attr_dev(path0, "stroke-width", "2");
+    			attr_dev(path0, "d", "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4");
+    			add_location(path0, file$7, 27, 10, 1117);
+    			attr_dev(svg0, "xmlns", "http://www.w3.org/2000/svg");
+    			attr_dev(svg0, "class", "h-4 w-4 mr-2");
+    			attr_dev(svg0, "fill", "none");
+    			attr_dev(svg0, "viewBox", "0 0 24 24");
+    			attr_dev(svg0, "stroke", "currentColor");
+    			add_location(svg0, file$7, 21, 8, 941);
+    			attr_dev(div2, "class", "w-full flex flex-row items-center justify-start px-4 py-2 rounded-md border border-transparent hover:border-green-300");
+    			toggle_class(div2, "selected", /*active*/ ctx[0] === "services");
+    			add_location(div2, file$7, 17, 6, 699);
+    			attr_dev(path1, "stroke-linecap", "round");
+    			attr_dev(path1, "stroke-linejoin", "round");
+    			attr_dev(path1, "stroke-width", "2");
+    			attr_dev(path1, "d", "M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z");
+    			add_location(path1, file$7, 45, 10, 1793);
+    			attr_dev(svg1, "xmlns", "http://www.w3.org/2000/svg");
+    			attr_dev(svg1, "class", "h-4 w-4 mr-2");
+    			attr_dev(svg1, "fill", "none");
+    			attr_dev(svg1, "viewBox", "0 0 24 24");
+    			attr_dev(svg1, "stroke", "currentColor");
+    			add_location(svg1, file$7, 39, 8, 1617);
+    			attr_dev(div3, "class", "w-full flex flex-row items-center justify-start border border-transparent hover:border-green-300 px-4 py-2 rounded-md");
+    			toggle_class(div3, "selected", /*active*/ ctx[0] === "account");
+    			add_location(div3, file$7, 35, 6, 1377);
+    			attr_dev(div4, "class", "flex flex-col flex-grow justify-start px-2 py-6 space-y-2");
+    			add_location(div4, file$7, 16, 4, 621);
+    			attr_dev(path2, "stroke-linecap", "round");
+    			attr_dev(path2, "stroke-linejoin", "round");
+    			attr_dev(path2, "stroke-width", "2");
+    			attr_dev(path2, "d", "M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1");
+    			add_location(path2, file$7, 62, 8, 2381);
+    			attr_dev(svg2, "xmlns", "http://www.w3.org/2000/svg");
+    			attr_dev(svg2, "class", "mr-2 h-4 w-4");
+    			attr_dev(svg2, "fill", "none");
+    			attr_dev(svg2, "viewBox", "0 0 24 24");
+    			attr_dev(svg2, "stroke", "currentColor");
+    			add_location(svg2, file$7, 56, 6, 2217);
+    			attr_dev(div5, "class", "w-full flex flex-row items-center justify-start border border-transparent hover:border-green-300 px-4 py-2 my-4 rounded-md");
+    			add_location(div5, file$7, 54, 4, 2068);
+    			attr_dev(div6, "class", "w-72 p-4 border-r border-stone-300 font-sans flex flex-col justify-between");
+    			add_location(div6, file$7, 10, 2, 314);
+    			attr_dev(div7, "class", "relative w-screen h-screen flex flex-row min-h-full text-stone-700");
+    			add_location(div7, file$7, 9, 0, 231);
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, div7, anchor);
+    			append_dev(div7, div6);
+    			append_dev(div6, div1);
+    			append_dev(div1, img);
+    			append_dev(div1, t0);
+    			append_dev(div1, div0);
+    			append_dev(div6, t2);
+    			append_dev(div6, div4);
+    			append_dev(div4, div2);
+    			append_dev(div2, svg0);
+    			append_dev(svg0, path0);
+    			append_dev(div2, t3);
+    			mount_component(link0, div2, null);
+    			append_dev(div4, t4);
+    			append_dev(div4, div3);
+    			append_dev(div3, svg1);
+    			append_dev(svg1, path1);
+    			append_dev(div3, t5);
+    			mount_component(link1, div3, null);
+    			append_dev(div6, t6);
+    			append_dev(div6, div5);
+    			append_dev(div5, svg2);
+    			append_dev(svg2, path2);
+    			append_dev(div5, t7);
+    			mount_component(link2, div5, null);
+    			append_dev(div7, t8);
+    			mount_component(router, div7, null);
+    			current = true;
+
+    			if (!mounted) {
+    				dispose = [
+    					listen_dev(div2, "click", /*click_handler*/ ctx[1], false, false, false),
+    					listen_dev(div3, "click", /*click_handler_1*/ ctx[2], false, false, false)
+    				];
+
+    				mounted = true;
+    			}
+    		},
+    		p: function update(ctx, [dirty]) {
+    			const link0_changes = {};
+
+    			if (dirty & /*$$scope*/ 16) {
+    				link0_changes.$$scope = { dirty, ctx };
+    			}
+
+    			link0.$set(link0_changes);
+
+    			if (dirty & /*active*/ 1) {
+    				toggle_class(div2, "selected", /*active*/ ctx[0] === "services");
+    			}
+
+    			const link1_changes = {};
+
+    			if (dirty & /*$$scope*/ 16) {
+    				link1_changes.$$scope = { dirty, ctx };
+    			}
+
+    			link1.$set(link1_changes);
+
+    			if (dirty & /*active*/ 1) {
+    				toggle_class(div3, "selected", /*active*/ ctx[0] === "account");
+    			}
+
+    			const link2_changes = {};
+
+    			if (dirty & /*$$scope*/ 16) {
+    				link2_changes.$$scope = { dirty, ctx };
+    			}
+
+    			link2.$set(link2_changes);
+    			const router_changes = {};
+
+    			if (dirty & /*$$scope*/ 16) {
+    				router_changes.$$scope = { dirty, ctx };
+    			}
+
+    			router.$set(router_changes);
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(link0.$$.fragment, local);
+    			transition_in(link1.$$.fragment, local);
+    			transition_in(link2.$$.fragment, local);
+    			transition_in(router.$$.fragment, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(link0.$$.fragment, local);
+    			transition_out(link1.$$.fragment, local);
+    			transition_out(link2.$$.fragment, local);
+    			transition_out(router.$$.fragment, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(div7);
+    			destroy_component(link0);
+    			destroy_component(link1);
+    			destroy_component(link2);
+    			destroy_component(router);
     			mounted = false;
     			run_all(dispose);
     		}
@@ -25251,55 +27558,38 @@ var app = (function () {
     }
 
     function instance$7($$self, $$props, $$invalidate) {
-    	let $apikey;
-    	let $user;
-    	let $publickey;
-    	validate_store(apikey, 'apikey');
-    	component_subscribe($$self, apikey, $$value => $$invalidate(0, $apikey = $$value));
-    	validate_store(user, 'user');
-    	component_subscribe($$self, user, $$value => $$invalidate(3, $user = $$value));
-    	validate_store(publickey, 'publickey');
-    	component_subscribe($$self, publickey, $$value => $$invalidate(1, $publickey = $$value));
+    	let active;
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('Dashboard', slots, []);
-    	console.log($user);
-    	onMount(() => console.log("Dashboard Mounted"));
-
-    	const writeToClipboard = text => {
-    		let type = "text/plain";
-    		let blob = new Blob([text], { type });
-    		let data = [new ClipboardItem({ [type]: blob })];
-
-    		navigator.clipboard.write(data).then(
-    			() => {
-    				console.log("copied items");
-    			},
-    			err => {
-    				console.log(`Unable to copy due to : ${err}`);
-    			}
-    		).catch(console.log);
-    	};
-
-    	console.log($apikey);
     	const writable_props = [];
 
     	Object.keys($$props).forEach(key => {
-    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1.warn(`<Dashboard> was created with unknown prop '${key}'`);
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console.warn(`<Dashboard> was created with unknown prop '${key}'`);
     	});
+
+    	const click_handler = () => $$invalidate(0, active = "services");
+    	const click_handler_1 = () => $$invalidate(0, active = "account");
 
     	$$self.$capture_state = () => ({
-    		apikey,
-    		publickey,
-    		user,
-    		onMount,
-    		Menu,
-    		writeToClipboard,
-    		$apikey,
-    		$user,
-    		$publickey
+    		Account,
+    		Services,
+    		Link: Link$1,
+    		Route: Route$1,
+    		Router: Router$1,
+    		Service,
+    		active
     	});
 
-    	return [$apikey, $publickey, writeToClipboard];
+    	$$self.$inject_state = $$props => {
+    		if ('active' in $$props) $$invalidate(0, active = $$props.active);
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	$$invalidate(0, active = "services");
+    	return [active, click_handler, click_handler_1];
     }
 
     class Dashboard extends SvelteComponentDev {
@@ -27853,7 +30143,7 @@ var app = (function () {
     	return block;
     }
 
-    // (18:4) <PrivateRoute path="/" let:location>
+    // (18:4) <PrivateRoute path="/*" let:location>
     function create_default_slot_2(ctx) {
     	let dashboard;
     	let current;
@@ -27885,7 +30175,7 @@ var app = (function () {
     		block,
     		id: create_default_slot_2.name,
     		type: "slot",
-    		source: "(18:4) <PrivateRoute path=\\\"/\\\" let:location>",
+    		source: "(18:4) <PrivateRoute path=\\\"/*\\\" let:location>",
     		ctx
     	});
 
@@ -27963,7 +30253,7 @@ var app = (function () {
 
     	privateroute0 = new PrivateRoute({
     			props: {
-    				path: "/",
+    				path: "/*",
     				$$slots: {
     					default: [
     						create_default_slot_2,

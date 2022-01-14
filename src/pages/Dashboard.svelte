@@ -1,79 +1,81 @@
 <script>
-  import { apikey, publickey, user } from "../store";
-  import { onMount } from "svelte";
-  import Menu from "../Components/Menu.svelte";
-  console.log($user);
+  import Account from "./Account.svelte";
+  import Services from "./Services.svelte";
+  import { Link, Route, Router } from "svelte-navigator";
+import Service from "./Service.svelte";
 
-  onMount(() => console.log("Dashboard Mounted"));
-
-  const writeToClipboard = (text) => {
-    let type = "text/plain";
-    let blob = new Blob([text], { type });
-    let data = [new ClipboardItem({ [type]: blob })];
-
-    navigator.clipboard
-      .write(data)
-      .then(
-        () => {
-          console.log("copied items");
-        },
-        (err) => {
-          console.log(`Unable to copy due to : ${err}`);
-        }
-      )
-      .catch(console.log);
-  };
-
-  console.log($apikey);
+  $: active = "services";
 </script>
 
-<div class="relative w-full flex flex-row min-h-full text-stone-700">
-  <Menu />
-
-  <main class="w-full h-full pt-[78px]">
-    <header class=" bg-white shadow">
-      <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-        <h1 class="text-2xl font-bold text-gray-700">API Details</h1>
-      </div>
-    </header>
-    <div class="w-4/5 mx-auto py-6 sm:px-6 lg:px-8">
-      <!-- Replace with your content -->
-      <div
-        class="mt-8 font-sans grid grid-cols-[repeat(2,_max-content)] items-start justify-items-start">
-        <span class="m-2 col-span-1 justify-self-end self-center text-stone-600"
-          >API key</span>
-        <span
-          class="w-fit col-span-1 px-4 py-2 m-2 border border-stone-200 bg-stone-50 rounded-md shadow-inner text-stone-500 font-mono font-bold inline-flex">
-          {$apikey || "api key unavailable"}
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="ml-2 h-6 w-6 text-stone-300 hover:text-stone-500 cursor-pointer"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            on:click={writeToClipboard($apikey)}>
-            <path
-              d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" />
-            <path d="M5 3a2 2 0 00-2 2v6a2 2 0 002 2V5h8a2 2 0 00-2-2H5z" />
-          </svg>
-        </span>
-        <span class="m-2 col-span-1 justify-self-end self-center text-stone-600"
-          >Public key</span>
-        <span
-          class="w-fit col-span-1 px-4 py-2 m-2 border border-stone-200 bg-stone-50 rounded-md shadow-inner text-stone-500 font-mono font-bold inline-flex">
-          {$publickey || "api key unavailable"}
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="ml-2 h-6 w-6 text-stone-300 hover:text-stone-500 cursor-pointer"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            on:click={writeToClipboard($publickey)}>
-            <path
-              d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" />
-            <path d="M5 3a2 2 0 00-2 2v6a2 2 0 002 2V5h8a2 2 0 00-2-2H5z" />
-          </svg>
-        </span>
-      </div>
-      <!-- /End replace -->
+<div class="relative w-screen h-screen flex flex-row min-h-full text-stone-700">
+  <div
+    class="w-72 p-4 border-r border-stone-300 font-sans flex flex-col justify-between">
+    <div class="flex flex-row items-center justify-start p-2">
+      <img src="./favicon-32x32.png" class="mr-2 w-6 h-6" alt="site icon" />
+      <div class="text-lg font-sans font-bold">6buns</div>
     </div>
-  </main>
+    <div class="flex flex-col flex-grow justify-start px-2 py-6 space-y-2">
+      <div
+        class="w-full flex flex-row items-center justify-start px-4 py-2 rounded-md border border-transparent hover:border-green-300"
+        class:selected={active === "services"}
+        on:click={() => (active = "services")}>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-4 w-4 mr-2"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+        </svg>
+        <Link to="/">Services</Link>
+      </div>
+      <div
+        class="w-full flex flex-row items-center justify-start border border-transparent hover:border-green-300 px-4 py-2 rounded-md"
+        class:selected={active === "account"}
+        on:click={() => (active = "account")}>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-4 w-4 mr-2"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+        </svg>
+        <Link to="account">Account</Link>
+      </div>
+    </div>
+    <div
+      class="w-full flex flex-row items-center justify-start border border-transparent hover:border-green-300 px-4 py-2 my-4 rounded-md">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        class="mr-2 h-4 w-4"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor">
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+      </svg>
+      <Link to="#">Logout</Link>
+    </div>
+  </div>
+  <Router>
+    <main class="w-full h-full p-8 bg-green-50">
+      <Route path="account" component={Account} />
+      <Route path="/" component={Services} />
+      <Route path="/:id" let:params>
+        <Service id={params.id} />
+      </Route>
+    </main>
+  </Router>
 </div>

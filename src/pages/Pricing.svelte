@@ -1,7 +1,7 @@
 <script>
   import Menu from "../Components/Menu.svelte";
 
-  let sl = 90; // session length
+  let sl = 20; // session length
   let mp = 4; // minimum producers req.
   let msl = 4; // minimum session length
   let uf = 10; // usage frequency
@@ -35,16 +35,7 @@
 
   // $: apcu = pcu - 10000; // consumer track usage exceeded beyond free limit
 
-  $: charge =
-    cc < 25
-      ? 0.0008
-      : cc < 181
-      ? 0.0006
-      : cc < 761
-      ? 0.0004
-      : cc < 3121
-      ? 0.0002
-      : 0.0001;
+  $: charge = 0.005;
 
   $: pcCost = pcu * charge; // producer count cost
 
@@ -53,21 +44,21 @@
   // $: epm = pm > 2000 ? pm - 2000 : 0; // over-quota participant minute
   // $: pmc = pm > 2000 ? nn(epm * pmct) : 0; // participant-minute cost
 
-  $: tuf = uft === "Daily" ? uf * 28 : uf * 4; // total usage frequency in a month
+  $: tuf = uft === "Daily" ? uf * 7 : uf; // total usage frequency in a month
   // $: etuf = tuf - 200; // extra total usage frequency in a month
   // $: rc = tuf > 200 ? nn(etuf * rch) : 0; // room cost
 
-  let mc = 1; // monthly costs
+  let mc = 3; // monthly costs
   $: tc = pcCost > 0 ? nn(mc + pcCost) : nn(mc); // total monthly costs
 </script>
 
 <main
-  class="relative pt-12 snap-y snap-mandatory bg-white text-skin-base flex-initial">
+  class="relative snap-y snap-mandatory bg-stone-300/20 text-skin-base flex-initial">
   <Menu />
 
   <section
     id="pricing"
-    class="w-full pt-6 snap-center h-max grid grid-flow-col grid-cols-1 grid-rows-1 justify-items-center items-center">
+    class="w-full snap-center h-max grid grid-flow-col grid-cols-1 grid-rows-1 justify-items-center items-center">
     <div
       class="w-full py-8 px-4 rounded-2xl grid justify-items-center items-center">
       <!-- <svg
@@ -75,7 +66,7 @@
         viewBox="0 0 760 455"
         xmlns="http://www.w3.org/2000/svg">
         <foreignObject x="0" y="0" width="760" height="455"> -->
-      <div class="w-full md:w-4/5">
+      <div class="w-full md:w-4/5 p-4">
         <div class="w-full rounded-2xl bg-stone-50 overflow-hidden shadow">
           <div
             class="w-full px-4 py-2 bg-green-200 text-stone-700 text-4xl font-serif font-bold text-center">
@@ -86,10 +77,10 @@
               <div class="w-full lg:w-1/2 px-6 md:px-12 py-4 text-stone-700">
                 <div class="flex flex-col">
                   <span class="text-stone-700 text-2xl font-serif font-bold"
-                    >Monthly Cost</span>
+                    >Weekly Cost</span>
                   <span class="text-stone-500 text-xs font-mono"
-                    >This cost will be charged each month, as a fee for using
-                    the service.</span>
+                    >This cost will be charged each week, as a fee for using the
+                    service.</span>
                 </div>
               </div>
               <svg
@@ -105,7 +96,7 @@
               <div
                 class="w-full lg:w-1/2 m-auto lg:m-0 px-6 md:px-12 py-4 bg-green-100 flex flex-col">
                 <span class="text-stone-700 text-2xl font-mono font-bold">
-                  $9/month</span>
+                  $3/week</span>
                 <span class="text-stone-500 text-xs font-mono">
                   + 20% of usage cost per month, after exceeding base quota</span>
               </div>
@@ -115,7 +106,7 @@
               <div
                 class="w-full lg:w-1/2 px-6 md:px-12 py-4  text-stone-700 flex flex-col">
                 <span class="text-stone-700 text-2xl font-serif font-bold">
-                  Included Consumer-min</span>
+                  Usage Cost</span>
                 <span class="text-stone-500 text-xs font-mono underline"
                   ><a href="#consumer">What is consumer-min ?</a></span>
               </div>
@@ -132,16 +123,15 @@
               <div
                 class="w-full lg:w-1/2 m-auto lg:m-0 px-6 md:px-12 py-4 bg-green-100 text-stone-700 flex flex-col">
                 <span class="text-stone-700 text-2xl font-mono font-bold"
-                  >10,000</span>
+                  >0.005/consumer-min</span>
                 <span class="text-stone-500 text-xs font-mono">
-                  + $0.002 per consumer track per minute. For audio, 1 consumer
-                  track, and for video, 2 consumer tracks (1st for video, 2nd
-                  for audio) are considered for billing.
+                  For audio, 1 consumer track, and for video, 2 consumer tracks
+                  (1st for video, 2nd for audio) are considered for billing.
                 </span>
               </div>
             </div>
 
-            <div class="w-full flex flex-col lg:flex-row">
+            <!-- <div class="w-full flex flex-col lg:flex-row">
               <div
                 class="w-full lg:w-1/2 px-6 md:px-12 py-4  text-stone-700  text-2xl font-serif font-bold">
                 Programmatic rooms
@@ -182,13 +172,11 @@
               <div
                 class="w-full lg:w-1/2 m-auto lg:m-0 px-6 md:px-12 py-4 bg-green-100 text-stone-700 flex flex-col">
                 <span class="text-stone-700 text-2xl font-mono font-bold">
-                  150
+                  Unlimited
                 </span>
-                <span class="text-stone-500 text-xs font-mono">
-                  unlimited users in a session, coming soon.
-                </span>
+                <span class="text-stone-500 text-xs font-mono" />
               </div>
-            </div>
+            </div> -->
           </div>
         </div>
       </div>
@@ -259,7 +247,8 @@
                   type="checkbox"
                   bind:checked={avp}
                   class="mr-2 rounded focus:ring-0 text-green-500" />All users
-                are producing <span class="lowercase">{st}</span> simultaneously (at the same time).</span>
+                are producing <span class="lowercase">{st}</span> simultaneously
+                (at the same time).</span>
               {#if !avp}
                 <div class="w-full flex flex-col lg:flex-row">
                   <div
@@ -306,7 +295,7 @@
               <div class="w-full flex flex-row items-center justify-between">
                 <div class="w-3/4 flex flex-col items-start justify-center">
                   <span class="font-serif text-lg font-bold"
-                    >Monthly Room Count</span>
+                    >Weekly Room Count</span>
                   <span class="text-stone-500 text-sm">
                     Total number of rooms created programmatically, using our
                     api in a month.
@@ -338,44 +327,38 @@
           <div class="w-full h-px bg-stone-300" />
           <div
             class="p-2 grid grid-rows-[auto] items-center justify-items-center">
-            <div class="w-full my-2 flex flex-row items-start justify-center">
-              <div class="w-3/5 pl-2 flex flex-col items-start">
-                <span class="font-serif font-bold text-lg">Usage Costs</span>
-                <span class="text-sm text-stone-500">
-                  For handling {nn(cc)} tracks, over {nn(tuf)} sessions, where each
-                  session was {sl} minutes long, and had approximately over {pc}
-                  users interacting.</span>
-                <span class="text-base font-serif text-stone-700">
-                  {nn(cc)} consumer media tracks
-                </span>
-                <span class="text-base font-serif text-stone-700"
-                >{nn(tuf * sl)} mins</span>
-                <span class="text-base font-serif text-stone-700">
-                  {nn(cc * tuf * sl)} consumer-min
-                </span>
-                <span class="text-sm font-serif text-stone-500">
-                  ${(charge)} per consumer-min
-                </span>
-              </div>
-              {#if pcu < 100}
-                <h1
-                  class="w-2/5 font-mono font-bold text-lg text-right pr-2 line-through">
-                  {pcCost > 0 ? `$${nn(pcCost)}` : "-"}
-                </h1>
-              {:else}
-                <h1 class="w-2/5 font-mono font-bold text-lg text-right pr-2">
-                  {pcCost > 0 ? `$${nn(pcCost)}` : "-"}
-                </h1>
-              {/if}
-            </div>
             <div class="w-full my-2 flex flex-row items-start justify-evenly">
               <div class="w-3/5 pl-2 flex flex-col items-start">
-                <span class="font-serif font-bold text-lg">Service Fee</span>
+                <span class="font-serif font-bold text-lg">Weekly Cost</span>
                 <span class="text-sm text-stone-500"
                   >Base Cost for using our services.</span>
               </div>
               <h1 class="w-2/5 font-mono font-bold text-lg text-right pr-2">
                 ${nn(mc)}
+              </h1>
+            </div>
+            <div class="w-full my-2 flex flex-row items-start justify-center">
+              <div class="w-3/5 pl-2 flex flex-col items-start">
+                <span class="font-serif font-bold text-lg">Usage Costs</span>
+                <span class="text-xs font-mono text-stone-500">
+                  For handling {nn(cc)} tracks, over {nn(tuf)} sessions, where each
+                  session was {sl} minutes long, and had approximately over {pc}
+                  users interacting.</span>
+                <span class="text-base font-serif text-stone-700">
+                  {nn(cc)} consumer tracks
+                </span>
+                <span class="text-base font-serif text-stone-700"
+                  >{nn(tuf * sl)} mins</span>
+                <span class="text-base font-serif text-stone-700">
+                  {nn(cc * tuf * sl)} consumer-min
+                </span>
+                <span class="text-sm font-serif text-stone-500">
+                  ${charge} per consumer-min
+                </span>
+              </div>
+
+              <h1 class="w-2/5 font-mono font-bold text-lg text-right pr-2">
+                {pcCost > 0 ? `$${nn(pcCost)}` : "-"}
               </h1>
             </div>
           </div>

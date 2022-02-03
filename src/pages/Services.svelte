@@ -346,5 +346,4 @@
     - plan type,
     - plan price,
     - commited use discount,
-
  -->

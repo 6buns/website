@@ -5,6 +5,8 @@
   import Profile from "./pages/Profile.svelte";
   import Products from "./pages/Products.svelte";
   import Pricing from "./pages/Pricing.svelte";
+  import FAQ from "./pages/FAQ.svelte";
+import Docs from "./pages/Docs.svelte";
 </script>
 
 <Router>
@@ -14,6 +16,12 @@
     </Route>
     <Route path="/products">
       <Products />
+    </Route>
+    <Route path="/docs/*">
+      <Docs />
+    </Route>
+    <Route path="/faq">
+      <FAQ />
     </Route>
     <PrivateRoute path="/*" let:location>
       <Dashboard />

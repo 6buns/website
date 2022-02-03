@@ -8,18 +8,17 @@
   onMount(() => console.log("Menu Mounted"));
 </script>
 
-<nav
-  class="fixed inset-x-0 top-0 z-20 shadow w-full py-4 px-2 xl:px-16 bg-stone-50">
+<nav class="w-full py-2 px-4 xl:px-16">
   <div class="flex flex-row items-center justify-between md:justify-start">
     <a
       href="/"
-      class="flex-grow-0 flex flex-row items-center justify-center space-x-2 px-4 py-2">
-      <img src="./favicon-32x32.png" alt="site icon" />
+      class="flex-grow-0 flex flex-row items-center justify-center space-x-4 px-4 py-2">
+      <img src="/favicon-32x32.png" class="w-8 h-8" alt="site icon" />
+      <span class="text-3xl font-semibold font-serif">6buns</span>
     </a>
     <div
-      class="md:w-full md:flex flex-row flex-grow justify-between items-center hidden">
-      <ul
-        class=" flex flex-row items-center justify-evenly capitalize lg:space-x-2 md:space-x-0">
+      class="md:w-full md:flex flex-row flex-grow justify-end items-center space-x-4 hidden text-md font-semibold">
+      <ul class=" flex flex-row items-center justify-evenly capitalize">
         {#if $user.uid}
           <li class="btn btn-plain">
             <a href="/"> Dashboard </a>
@@ -34,7 +33,13 @@
           <li class="btn btn-plain">
             <a href="/pricing">pricing</a>
           </li>
+          <li class="btn btn-plain">
+            <a href="/faq">FAQ</a>
+          </li>
         {/if}
+        <li class="btn btn-plain">
+          <a href="/docs">Docs</a>
+        </li>
       </ul>
       {#if !$user.uid}
         <ul
@@ -84,6 +89,9 @@
             <a href="/pricing">pricing</a>
           </li>
         {/if}
+        <li class="btn btn-plain">
+          <a href="/docs">Docs</a>
+        </li>
       </ul>
       {#if !$user.uid}
         <ul

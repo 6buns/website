@@ -4,8 +4,8 @@ module.exports = {
     extend: {
       fontFamily: {
         serif: "'DM Serif Display', serif",
-        sans: "'Roboto', sans-serif",
-        mono: "'Roboto Mono', monospace",
+        sans: "'Ubuntu', sans-serif",
+        mono: "'Ubuntu Mono', monospace",
       },
       fontSize: {
         xxxs: ["8px", "16px"],
@@ -60,5 +60,5 @@ module.exports = {
       },
     },
   },
-  plugins: [require("@tailwindcss/forms")],
+  plugins: [require("@tailwindcss/forms"), require('@tailwindcss/typography'),],
 };

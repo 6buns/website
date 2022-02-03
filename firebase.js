@@ -31,39 +31,6 @@ export const login = () => {
   signInWithPopup(auth, googleProvider)
     .then((result) => {
       console.log("User Logged In.");
-
-      onValue(
-        ref(db, `/userkey/${result.user.uid}`),
-        (snapshot) => {
-          apikey.update(
-            (k) => (k = (snapshot.val() && snapshot.val().apikey) || "")
-          );
-          publickey.update(
-            (k) => (k = (snapshot.val() && snapshot.val().publickey) || "")
-          );
-        },
-        {
-          onlyOnce: true,
-        }
-      );
-
-      if (apikey === "") {
-        const apikey = keyGen();
-        const publickey = keyGen();
-        console.log(`unable to get`, { apikey, publickey });
-        set(ref(db, `userkey/${auth.currentUser.uid}`), {
-          apikey,
-          publickey,
-          createdAt: new Date().getTime(),
-        })
-          .then((d) => {
-            console.log(`Created and saved to db : ${JSON.stringify(d)}`, {
-              apikey,
-              publickey,
-            });
-          })
-          .catch(console.log);
-      }
     })
     .catch((error) => {
       const errorCode = error.code;
@@ -87,19 +54,4 @@ export const logout = () => {
 
 onAuthStateChanged(auth, (u) => {
   user.update((e) => (e = { ...u }));
-  const userId = u.uid;
-  onValue(
-    ref(db, `/userkey/${userId}`),
-    (snapshot) => {
-      apikey.update(
-        (k) => (k = (snapshot.val() && snapshot.val().apikey) || "")
-      );
-      publickey.update(
-        (k) => (k = (snapshot.val() && snapshot.val().publickey) || "")
-      );
-    },
-    {
-      onlyOnce: true,
-    }
-  );
 });

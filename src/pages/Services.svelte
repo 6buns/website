@@ -12,22 +12,16 @@
         name: "Plan",
         description: "Plan Name",
       },
-      max_consumers: {
-        name: "Max Consumers",
-        description:
-          'Consumers are users consuming the livestream of video/audio. For eg. In a room of 24 users, only one user producing video/audio, therefore consumers count for this scenario are 23 other users who are "CONSUMING" the live-stream of the single user.',
-      },
-      max_producers: {
-        name: "Max Active Users",
-        description:
-          "Users who's audio & video is being shown to other users in the room. These users can interact with other active users, in the room through audio or video.",
+      included:{
+        name: "Included Consumer Minutes",
+        description: "eg. 24 consumers in a room can be hosted f"
       },
       usage_cost: {
         name: "Usage cost",
         description:
           "Calculated based on peak number of consumers handled by the room session and length of the room session.",
       },
-      monthly_charge: {
+      weekly_charge: {
         name: "Recurring Monthly Charge",
         description: "Fixed charge, billed each month.",
       },
@@ -35,32 +29,10 @@
 
   const plans = {
     sm: {
-      name: "Small",
-      max_consumers: 24,
-      max_producers: 4,
-      usage_cost: "$0.0002/consumer/min",
-      monthly_charge: "$1",
-    },
-    md: {
-      name: "Medium",
-      max_consumers: 112,
-      max_producers: 8,
-      usage_cost: "$0.0002/consumer/min",
-      monthly_charge: "$1 + ( 0.5% * extra usage cost )",
-    },
-    lg: {
-      name: "Large",
-      max_consumers: 760,
-      max_producers: 20,
-      usage_cost: "$0.0001/consumer/min",
-      monthly_charge: "$9 + ( 0.5% * extra usage cost )",
-    },
-    xl: {
-      name: "X-Large",
-      max_consumers: 3120,
-      max_producers: 40,
-      usage_cost: "$0.0001/consumer/min",
-      monthly_charge: "$99 + ( 0.5% * extra usage cost )",
+      name: "Plan 101",
+      included: 600,
+      usage_cost: "$0.005/consumer-min",
+      weekly_charge: "$3",
     },
   };
 
@@ -187,8 +159,6 @@
         </div>
       {/each}
     {/if}
-  {:catch}
-    <div />
   {/await}
   <div
     class=" flex flex-col justify-evenly space-y-4 cursor-pointer p-4 rounded-2xl border-2 border-dotted border-stone-300 text-stone-500 bg-white shadow-sm group hover:shadow-md">

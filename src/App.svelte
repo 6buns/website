@@ -31,6 +31,3 @@ import Docs from "./pages/Docs.svelte";
     </PrivateRoute>
   </div>
 </Router>
-
-<!-- apikey : chS52si83GHxohnS5C53vjEKc0LkjrcraEFmnjR -->
-<!-- publickey : tW2ONzka5NXEurlZuwqykPrwJU06SSON96uws9 -->

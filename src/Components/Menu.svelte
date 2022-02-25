@@ -8,11 +8,11 @@
   onMount(() => console.log("Menu Mounted"));
 </script>
 
-<nav class="w-full py-2 px-4 xl:px-16">
+<nav class="w-full py-2">
   <div class="flex flex-row items-center justify-between md:justify-start">
     <a
       href="/"
-      class="flex-grow-0 flex flex-row items-center justify-center space-x-4 px-4 py-2">
+      class="flex-grow-0 flex flex-row items-center justify-center space-x-4 py-2">
       <img src="/favicon-32x32.png" class="w-8 h-8" alt="site icon" />
       <span class="text-3xl font-semibold font-serif">6buns</span>
     </a>
@@ -28,13 +28,10 @@
           </li>
         {:else}
           <li class="btn btn-plain">
-            <a href="/products">products</a>
+            <a href="/#products">products</a>
           </li>
           <li class="btn btn-plain">
-            <a href="/pricing">pricing</a>
-          </li>
-          <li class="btn btn-plain">
-            <a href="/faq">FAQ</a>
+            <a href="/#pricing">pricing</a>
           </li>
         {/if}
         <li class="btn btn-plain">

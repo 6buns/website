@@ -1,9 +1,9 @@
 node_modules
 
-yarn.lock
-
-package-*.json
-
 public
 
 .firebase
+
+package-*.json
+
+yarn.lock

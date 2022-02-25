@@ -48,6 +48,6 @@
   }
 
   .selected {
-    @apply bg-green-300;
+    @apply font-bold border-stone-400;
   }
 }

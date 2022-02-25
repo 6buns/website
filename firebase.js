@@ -31,6 +31,7 @@ export const login = () => {
   signInWithPopup(auth, googleProvider)
     .then((result) => {
       console.log("User Logged In.");
+      user.update((e) => (e = { ...result }))
     })
     .catch((error) => {
       const errorCode = error.code;
@@ -43,9 +44,11 @@ export const login = () => {
 };
 
 export const logout = () => {
+  console.log('incoming')
   signOut(auth)
     .then(() => {
       user.set({});
+      console.log('yeah', $user)
     })
     .catch((error) => {
       console.error(error);

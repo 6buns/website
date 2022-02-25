@@ -14,7 +14,7 @@
       },
       included:{
         name: "Included Consumer Minutes",
-        description: "eg. 24 consumers in a room can be hosted f"
+        description: "eg. 24 consumers in a room can be hosted"
       },
       usage_cost: {
         name: "Usage cost",
@@ -29,9 +29,9 @@
 
   const plans = {
     sm: {
-      name: "Plan 101",
-      included: 600,
-      usage_cost: "$0.005/consumer-min",
+      name: "M2M",
+      included: 1500,
+      usage_cost: "$0.002/consumer-min",
       weekly_charge: "$3",
     },
   };

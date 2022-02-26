@@ -8,7 +8,7 @@
   onMount(() => console.log("Menu Mounted"));
 </script>
 
-<nav class="w-full py-2">
+<nav class="w-full py-2 px-8 md:px-16">
   <div class="flex flex-row items-center justify-between md:justify-start">
     <a
       href="/"

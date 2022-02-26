@@ -11,7 +11,7 @@
       during the room session.
     </p>
     <p
-      class="bg-stone-50 w-full flex justify-center items-center py-2 rounded-md">
+      class="math">
       {`$$ \\text{Consumer Calculation Formula} = (N * M * 2)$$`}
     </p>
     where,
@@ -44,7 +44,7 @@
     </p>
     <!-- <img src="/pricingExample1_01.png" alt="" /> -->
     <p
-      class="bg-stone-50 w-full flex justify-center items-center py-2 rounded-md">
+      class="math">
       {`$$ (6 * 60) * $0.005 = $1.8 $$`}
     </p>
     <p>
@@ -58,13 +58,13 @@
       src="/pricingExample2_01.png"
       alt="(users in a room) * (users with camera/min on) * (1 for audio, 2 for video)" /> -->
     <p
-      class="bg-stone-50 w-full flex justify-center items-center py-2 rounded-md">
+      class="math">
       {`$$ (6 * 60) * $0.005 = $1.8 $$`}
     </p>
     <p>then the number of consumers handled by the room is</p>
     <!-- <img src="/pricingExample2_02.png" alt="100 * 6 * 2 = 1200" /> -->
     <p
-      class="bg-stone-50 w-full flex justify-center items-center py-2 rounded-md">
+      class="math">
       {`$$ \\text{(users in a room) * (users with camera/min on) * (1 for audio, 2 for video)} $$`}
     </p>
     <p>
@@ -74,7 +74,7 @@
       src="/pricingExample2_03.png"
       alt="1200 * 10 * 0.005 = $60 (basic realtime stats), 1200 * 10 * 0.0052 = $62.4 (advanced realtime stats)" /> -->
     <p
-      class="bg-stone-50 w-full flex justify-center items-center py-2 rounded-md">
+      class="math">
       {`$$ 1200 * 10 * 0.005 = $60 $$`}
     </p>
     <p>Total Cost incurred for this meeting is $60.</p>

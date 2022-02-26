@@ -17,7 +17,7 @@
     alt="24 * 20 * 0.005 = $2.4 (basic realtime stats)" /> -->
 
     <p
-      class="bg-stone-50 w-full flex justify-center items-center py-4 px-2 rounded-md">{`$$24 * 20 * 0.005 = $2.4 \\textit{ (basic realtime stats)}$$`}</p>
+      class="math">{`$$24 * 20 * 0.005 = $2.4 \\textit{ (basic realtime stats)}$$`}</p>
   <p>Base Realtime Included which are free,</p>
   <ul>
     <li>Consumer Count</li>

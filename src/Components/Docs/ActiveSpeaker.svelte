@@ -22,9 +22,9 @@
     <li>they go silent,</li>
     <li>Consumers handled by each user is greater than 12,</li>
   </ul>
-  <!-- <img src="/activeSpeaker_1.png" alt="" /> -->
+  <!-- <img class="w-full" src="/activeSpeaker_1.png" alt="" /> -->
   <p
-    class="bg-stone-50 w-fit flex justify-center items-center py-2 rounded-md">
+    class="math">
     {`$$ \\text{Consumers handled by each user} = \\text{all consumers handled by room} \\div \\text{users in a room} $$`}
   </p>
 </div>

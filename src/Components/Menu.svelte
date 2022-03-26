@@ -26,13 +26,6 @@
           <li class="btn btn-plain">
             <a href="/profile"> Profile </a>
           </li>
-        {:else}
-          <li class="btn btn-plain">
-            <a href="/#products">products</a>
-          </li>
-          <li class="btn btn-plain">
-            <a href="/#pricing">pricing</a>
-          </li>
         {/if}
         <li class="btn btn-plain">
           <a href="/docs">Docs</a>
@@ -77,13 +70,6 @@
           </li>
           <li class="btn btn-plain">
             <a href="/profile"> Profile </a>
-          </li>
-        {:else}
-          <li class="btn btn-plain">
-            <a href="/products">products</a>
-          </li>
-          <li class="btn btn-plain">
-            <a href="/pricing">pricing</a>
           </li>
         {/if}
         <li class="btn btn-plain">

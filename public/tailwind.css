@@ -51,11 +51,4 @@
     @apply font-bold border-stone-400;
   }
 
-  .math {
-    @apply bg-green-200 w-full flex justify-start items-center px-4 overflow-x-scroll
-  }
-
-  mjx-container {
-    @apply left-0
-  }
 }

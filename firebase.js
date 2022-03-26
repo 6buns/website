@@ -10,14 +10,13 @@ import { getDatabase, onValue, ref, set } from "firebase/database";
 import { keyGen } from "./keyGen";
 import { apikey, publickey, user } from "./src/store";
 
-var firebaseConfig = {
-  apiKey: "AIzaSyBk4jHWqZuza97tipWXlp1IBviRWofE1L8",
-  authDomain: "vide-server.firebaseapp.com",
-  projectId: "vide-server",
-  storageBucket: "vide-server.appspot.com",
-  messagingSenderId: "56731503187",
-  appId: "1:56731503187:web:c3b45d7f44ff06bba694a6",
-  measurementId: "${config.measurementId}",
+const firebaseConfig = {
+  apiKey: "AIzaSyB-FqYcQw3aZl7fvs139nHZZe1HEVHhhQs",
+  authDomain: "vide-336112.firebaseapp.com",
+  projectId: "vide-336112",
+  storageBucket: "vide-336112.appspot.com",
+  messagingSenderId: "614615467955",
+  appId: "1:614615467955:web:d153745472915b45072dc6"
 };
 
 initializeApp(firebaseConfig);

@@ -1,5 +1,5 @@
 /*
-! tailwindcss v3.0.12 | MIT License | https://tailwindcss.com
+! tailwindcss v3.0.23 | MIT License | https://tailwindcss.com
 *//*
 1. Prevent padding and border from affecting element width. (https://github.com/mozdevs/cssremedy/issues/4)
 2. Allow adding a border to an element by just adding a border-width. (https://github.com/tailwindcss/tailwindcss/pull/116)
@@ -431,6 +431,11 @@ input::placeholder,textarea::placeholder {
 
 ::-webkit-date-and-time-value {
   min-height: 1.5em;
+}
+
+::-webkit-datetime-edit,::-webkit-datetime-edit-year-field,::-webkit-datetime-edit-month-field,::-webkit-datetime-edit-day-field,::-webkit-datetime-edit-hour-field,::-webkit-datetime-edit-minute-field,::-webkit-datetime-edit-second-field,::-webkit-datetime-edit-millisecond-field,::-webkit-datetime-edit-meridiem-field {
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 select {
@@ -1115,9 +1120,6 @@ select {
 .-ml-px {
   margin-left: -1px;
 }
-.mb-4 {
-  margin-bottom: 1rem;
-}
 .mb-6 {
   margin-bottom: 1.5rem;
 }
@@ -1141,6 +1143,9 @@ select {
 }
 .mt-2 {
   margin-top: 0.5rem;
+}
+.mb-4 {
+  margin-bottom: 1rem;
 }
 .ml-4 {
   margin-left: 1rem;
@@ -1266,9 +1271,6 @@ select {
 .w-4 {
   width: 1rem;
 }
-.w-\[19\.5rem\] {
-  width: 19.5rem;
-}
 .w-\[36rem\] {
   width: 36rem;
 }
@@ -1296,6 +1298,9 @@ select {
 }
 .w-5 {
   width: 1.25rem;
+}
+.w-\[19\.5rem\] {
+  width: 19.5rem;
 }
 .w-\[22rem\] {
   width: 22rem;
@@ -1811,10 +1816,6 @@ select {
   padding-top: 0.25rem;
   padding-bottom: 0.25rem;
 }
-.py-10 {
-  padding-top: 2.5rem;
-  padding-bottom: 2.5rem;
-}
 .py-3 {
   padding-top: 0.75rem;
   padding-bottom: 0.75rem;
@@ -1826,6 +1827,10 @@ select {
 .px-5 {
   padding-left: 1.25rem;
   padding-right: 1.25rem;
+}
+.py-10 {
+  padding-top: 2.5rem;
+  padding-bottom: 2.5rem;
 }
 .px-36 {
   padding-left: 9rem;
@@ -1909,14 +1914,14 @@ select {
 .text-xl {
   font-size: 1.25rem;
 }
-.text-sm {
-  font-size: .875rem;
-}
 .text-lg {
   font-size: 1.125rem;
 }
 .text-base {
   font-size: 1rem;
+}
+.text-sm {
+  font-size: .875rem;
 }
 .text-5xl {
   font-size: 3rem;
@@ -1958,11 +1963,11 @@ select {
 .capitalize {
   text-transform: capitalize;
 }
-.leading-6 {
-  line-height: 1.5rem;
-}
 .leading-tight {
   line-height: 1.25;
+}
+.leading-6 {
+  line-height: 1.5rem;
 }
 .tracking-tight {
   letter-spacing: -0.025em;
@@ -2332,9 +2337,9 @@ select {
     background-color: rgb(41 37 36 / var(--tw-bg-opacity));
   }
 
-  .dark\:text-stone-100 {
+  .dark\:text-stone-200 {
     --tw-text-opacity: 1;
-    color: rgb(245 245 244 / var(--tw-text-opacity));
+    color: rgb(231 229 228 / var(--tw-text-opacity));
   }
 
   .dark\:text-stone-400 {
@@ -2342,9 +2347,9 @@ select {
     color: rgb(168 162 158 / var(--tw-text-opacity));
   }
 
-  .dark\:text-stone-200 {
+  .dark\:text-stone-100 {
     --tw-text-opacity: 1;
-    color: rgb(231 229 228 / var(--tw-text-opacity));
+    color: rgb(245 245 244 / var(--tw-text-opacity));
   }
 
   .dark\:hover\:text-stone-300:hover {

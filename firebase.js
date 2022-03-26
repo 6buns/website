@@ -7,8 +7,7 @@ import {
   signOut,
 } from "firebase/auth";
 import { getDatabase, onValue, ref, set } from "firebase/database";
-import { keyGen } from "./keyGen";
-import { apikey, publickey, user } from "./src/store";
+import { user } from "./src/store";
 
 const firebaseConfig = {
   apiKey: "AIzaSyB-FqYcQw3aZl7fvs139nHZZe1HEVHhhQs",

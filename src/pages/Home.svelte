@@ -1,60 +1,78 @@
+<style>
+.selected {
+  background-color: rgba(187, 247, 208, 1);
+}
+.enlarged {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: whitesmoke;
+  width: auto;
+  transform: inherit;
+  z-index: 10;
+}
+</style>
+
 <script>
-  import Menu from "../Components/Menu.svelte";
-  import Teaching from "../Components/home/displays/Teaching.svelte";
-  import Games from "../Components/home/displays/Games.svelte";
-  import Medical from "../Components/home/displays/Medical.svelte";
-  import Service from "../Components/home/displays/Service.svelte";
-  import { onDestroy } from "svelte";
-  import { flip } from "svelte/animate";
-  let current = { key: "games", component: Games },
-    currentArray = [
-      { key: "games", component: Games },
-      { key: "teaching", component: Teaching },
-      { key: "medical", component: Medical },
-      { key: "customer service", component: Service },
-    ],
-    SfuMerits = [
-      "Simple Weekly Pricing",
-      "Three line Integration",
-      "Unlimited users in a rooms",
-      "No limit on programatic room creation",
-      "Get Realtime Statistics",
-    ],
-    WebrtcMerits = [
-      "Simple Weekly Pricing",
-      "Three line Integration",
-      "4 users in video, and 8 users in audio room",
-      "No limit on programatic room creation",
-      "Get Realtime Statistics",
-    ],
-    enlarged = false;
-  const wordArray = ["video", "audio", "data"];
-  let index = 0;
+import Menu from "../Components/Menu.svelte";
+import Teaching from "../Components/home/displays/Teaching.svelte";
+import Games from "../Components/home/displays/Games.svelte";
+import Medical from "../Components/home/displays/Medical.svelte";
+import Service from "../Components/home/displays/Service.svelte";
+import { onDestroy } from "svelte";
+import { flip } from "svelte/animate";
+import { user } from "../store";
+let current = { key: "games", component: Games },
+  currentArray = [
+    { key: "games", component: Games },
+    { key: "teaching", component: Teaching },
+    { key: "medical", component: Medical },
+    { key: "customer service", component: Service },
+  ],
+  SfuMerits = [
+    "Simple Weekly Pricing",
+    "Three line Integration",
+    "Unlimited users in a rooms",
+    "No limit on programatic room creation",
+    "Get Realtime Statistics",
+  ],
+  WebrtcMerits = [
+    "Simple Weekly Pricing",
+    "Three line Integration",
+    "4 users in video, and 8 users in audio room",
+    "No limit on programatic room creation",
+    "Get Realtime Statistics",
+  ],
+  enlarged = false;
+const wordArray = ["video", "audio", "data"];
+let index = 0;
 
-  let rc = 1;
-  let rd = 20;
-  $: charge = 0.05 * rc * rd;
-  const nn = (n) => {
-    return Number.isNaN(n)
-      ? Number.isSafeInteger(parseFloat(n))
-        ? parseInt(n)
-        : parseFloat(parseFloat(n).toFixed(2))
-      : Number.isSafeInteger(n)
+// console.log("USER", $user);
+let rc = 1;
+let rd = 20;
+$: charge = 0.05 * rc * rd;
+const nn = (n) => {
+  return Number.isNaN(n)
+    ? Number.isSafeInteger(parseFloat(n))
       ? parseInt(n)
-      : parseFloat(parseFloat(n).toFixed(2));
-  };
+      : parseFloat(parseFloat(n).toFixed(2))
+    : Number.isSafeInteger(n)
+    ? parseInt(n)
+    : parseFloat(parseFloat(n).toFixed(2));
+};
 
-  const closeInterval = setInterval(() => {
-    const i = currentArray.findIndex((c) => current.key === c.key);
-    current =
-      i >= currentArray.length - 1 ? currentArray[0] : currentArray[i + 1];
-    console.log(current);
-    index = ~~(Math.random() * 3);
-  }, 5000);
+const closeInterval = setInterval(() => {
+  const i = currentArray.findIndex((c) => current.key === c.key);
+  current =
+    i >= currentArray.length - 1 ? currentArray[0] : currentArray[i + 1];
+  index = ~~(Math.random() * 3);
+}, 5000);
 
-  onDestroy(() => {
-    clearInterval(closeInterval);
-  });
+onDestroy(() => {
+  clearInterval(closeInterval);
+});
 </script>
 
 <main>
@@ -79,7 +97,8 @@
         </h1>
         <p
           class="row-span-1 lg:pr-4 text-lg font-normal tracking-tight text-stone-500 mx-auto">
-          A product that makes creating and managing WebRTC connections simpler. With just few lines of code, your webrtc connection is up and running.
+          A product that makes creating and managing WebRTC connections simpler.
+          With just few lines of code, your webrtc connection is up and running.
         </p>
         <div
           class="row-span-1 mt-8 flex lg:flex-row flex-col space-y-4 lg:space-y-0 justify-start">
@@ -113,18 +132,18 @@
             height="384">
             <div
               class="relative w-[36rem] h-[24rem] overflow-hidden flex flex-col items-stretch p-2 bg-stone-50 border-collapse">
-              <svelte:component this={current.component} />
+              <svelte:component this="{current.component}" />
             </div>
           </foreignObject>
         </svg>
         <ul class="w-full flex flex-row items-center justify-evenly">
           {#each currentArray as c, i}
             <li
-              class:selected={c.key === current.key}
-              on:click={() => {
+              class:selected="{c.key === current.key}"
+              on:click="{() => {
                 current = c;
                 // clearInterval(closeInterval);
-              }}
+              }}"
               class="px-2 py-1 rounded-md text-sm text-stone-700 cursor-pointer">
               <div class="capitalize w-max">{c.key}</div>
             </li>
@@ -143,10 +162,10 @@
           class="w-full grid grid-cols-1 grid-rows-2 md:grid-rows-1 md:grid-cols-2 gap-8 items-center justify-items-center ">
           <div
             class="w-full cursor-pointer flex items-center justify-center order-2 md:order-1"
-            class:enlarged={enlarged === 2}
-            on:click={() => {
-              enlarged = enlarged === 2 ? "" : 2;
-            }}>
+            class:enlarged="{enlarged === 2}"
+            on:click="{() => {
+              enlarged = enlarged === 2 ? '' : 2;
+            }}">
             <img class="object-center object-cover" src="./webrtc.png" alt="" />
           </div>
           <div class="px-0 md:px-12 w-full md:w-[484px] order-1 md:order-2">
@@ -167,7 +186,7 @@
                     <path
                       fill-rule="evenodd"
                       d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clip-rule="evenodd" />
+                      clip-rule="evenodd"></path>
                   </svg>
                   <p>{merit}</p>
                 </li>
@@ -202,7 +221,8 @@
               <div
                 class="w-full rounded-2xl bg-stone-50 overflow-hidden shadow">
                 <div
-                  class="w-full px-4 py-2 bg-green-200 text-stone-700 text-4xl font-serif font-bold text-center" />
+                  class="w-full px-4 py-2 bg-green-200 text-stone-700 text-4xl font-serif font-bold text-center">
+                </div>
                 <div class="w-full text-left">
                   <div class="w-full flex flex-col lg:flex-row">
                     <div
@@ -226,7 +246,7 @@
                       <path
                         fill-rule="evenodd"
                         d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
-                        clip-rule="evenodd" />
+                        clip-rule="evenodd"></path>
                     </svg>
                     <div
                       class="w-full lg:w-1/2 m-auto lg:m-0 px-6 md:px-12 py-4 bg-green-100 flex flex-col">
@@ -256,7 +276,7 @@
                       <path
                         fill-rule="evenodd"
                         d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
-                        clip-rule="evenodd" />
+                        clip-rule="evenodd"></path>
                     </svg>
                     <div
                       class="w-full lg:w-1/2 m-auto lg:m-0 px-6 md:px-12 py-4 bg-green-100 text-stone-700 flex flex-col">
@@ -288,7 +308,7 @@
                     min="1"
                     max="20"
                     class="block w-full h-1 appearance-none rounded-md bg-stone-300 border-transparent accent-green-500 focus:border-stone-500 focus:bg-stone-500 focus:ring-0"
-                    bind:value={rc} />
+                    bind:value="{rc}" />
                 </div>
 
                 <div class="w-full px-6 md:px-12 py-4 flex flex-col space-y-2">
@@ -307,7 +327,7 @@
                     min="1"
                     max="60"
                     class="block w-full h-1 appearance-none rounded-md bg-stone-300 border-transparent accent-green-500 focus:border-stone-500 focus:bg-stone-500 focus:ring-0"
-                    bind:value={rd} />
+                    bind:value="{rd}" />
                 </div>
 
                 <div
@@ -342,20 +362,3 @@
     </section>
   </div>
 </main>
-
-<style>
-  .selected {
-    background-color: rgba(187, 247, 208, 1);
-  }
-  .enlarged {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: whitesmoke;
-    width: auto;
-    transform: inherit;
-    z-index: 10;
-  }
-</style>

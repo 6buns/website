@@ -2,6 +2,7 @@
     <img
       class="w-[22rem] object-scale-down object-center"
       src="./chessboard.png"
+      type=""
       alt="" />
 
     <div

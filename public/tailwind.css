@@ -48,7 +48,7 @@
   }
 
   .selected {
-    @apply font-bold border-stone-400;
+    @apply font-bold border border-green-500;
   }
 
 }

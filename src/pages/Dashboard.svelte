@@ -14,14 +14,8 @@ $: active = "dashboard";
 //   console.log($user.customerId);
 // });
 
-const { state, send } = initAuth();
+const { send } = initAuth();
 </script>
-
-<svelte:head>
-  <script
-    src="https://polyfill.io/v3/polyfill.min.js?version=3.52.1&features=fetch"></script>
-  <script src="https://js.stripe.com/v3/"></script>
-</svelte:head>
 
 <Router>
   <div
@@ -134,7 +128,7 @@ const { state, send } = initAuth();
         </Link>
       </div>
       <div
-        on:click="{send('LOGOUT')}"
+        on:click="{() => send({ type: 'LOGOUT' })}"
         class="w-full flex flex-row items-center justify-start px-4 py-2 my-4 rounded-md hover:bg-green-100 cursor-pointer">
         <svg
           xmlns="http://www.w3.org/2000/svg"

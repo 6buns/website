@@ -1,8 +1,8 @@
 <script>
-import { user } from "../store";
 import { Route } from "svelte-navigator";
 import Home from "../pages/Home.svelte";
 import { initAuth } from "../auth";
+import Loading from "./Loading.svelte";
 
 const { state, send } = initAuth();
 export let path;
@@ -10,7 +10,7 @@ export let path;
 
 <Route path="{path}" let:params let:location let:navigate>
   {#if $state.matches("authenticating") || $state.matches("loading")}
-    <h1>authenticating</h1>
+    <Loading />
   {/if}
 
   {#if $state.matches("signedIn")}

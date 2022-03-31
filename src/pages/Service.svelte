@@ -35,12 +35,6 @@ const updateClipboard = (newClip) => {
 };
 </script>
 
-<svelte:head>
-  <script
-    src="https://polyfill.io/v3/polyfill.min.js?version=3.52.1&features=fetch"></script>
-  <script src="https://js.stripe.com/v3/"></script>
-</svelte:head>
-
 <div class="w-full h-full -my-4 flex flex-col items-center justify-center">
   <nav
     class="w-full px-4 py-4 flex flex-row items-center justify-start space-x-2">

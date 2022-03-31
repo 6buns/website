@@ -36,12 +36,12 @@ const services = {
         return loginWithGoogle();
     },
     loader: (ctx, _) => {
-        return new Promise(resolve => {
+        return new Promise((resolve, reject) => {
             setTimeout(() => {
                 ctx.auth
                     .getIdTokenResult()
                     .then(({ claims }) => userMapper(claims))
-                    .then(resolve);
+                    .then(resolve).catch(reject);
             }, 1500);
         });
     },

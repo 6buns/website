@@ -20,6 +20,11 @@ exports.createStripeCustomer = functions.auth.user().onCreate((user) => {
 
     return customerRef.set({
       userId: user.uid,
+      apiKey: "",
+      hasSubcription: false,
+      rooms: "",
+      avgPeer: "",
+      avgDuration: "",
       customerId: customer.id,
       createdAt: Date.now(),
       lastPaymentAt: "",
@@ -37,9 +42,6 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
   const customerRef = firestore.collection("customers");
 
   switch (hook) {
-    case "customer.created": {
-      break;
-    }
     case "invoice.paid": {
       const customerId = data.customer;
 
@@ -117,7 +119,7 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
 });
 
 exports.createCheckoutSession = functions.https.onRequest(async (req, res) => {
-  const priceId = req.body.priceId;
+  const {priceId, customer} = req.body;
 
   const session = await stripe.checkout.sessions.create({
     line_items: [
@@ -125,6 +127,8 @@ exports.createCheckoutSession = functions.https.onRequest(async (req, res) => {
         price: priceId,
       },
     ],
+    customer,
+    customer_creation: "if_required",
     mode: "subscription",
     success_url: `${YOUR_DOMAIN}/subscription/success/{CHECKOUT_SESSION_ID}`,
     cancel_url: `${YOUR_DOMAIN}/subscription/cancel`,

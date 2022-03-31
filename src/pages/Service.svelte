@@ -3,7 +3,10 @@ import { Link } from "svelte-navigator";
 
 export let id = undefined;
 
-let data = {
+$:data = $state.context.user;
+
+/**
+ * {
   hasSubscription: false,
   // usage
   usage: 650,
@@ -16,7 +19,8 @@ let data = {
   // payment
   paymentDate: 1648550680365,
   dueDate: 1649155521611,
-};
+}
+ */
 
 const updateClipboard = (newClip) => {
   navigator.permissions.query({ name: "clipboard-write" }).then((result) => {
@@ -33,6 +37,10 @@ const updateClipboard = (newClip) => {
     }
   });
 };
+
+import { initAuth } from "../auth";
+
+const { state, send } = initAuth;
 </script>
 
 <div class="w-full h-full -my-4 flex flex-col items-center justify-center">
@@ -55,7 +63,7 @@ const updateClipboard = (newClip) => {
   </nav>
   <div
     class="w-full h-full bg-white rounded-2xl shadow-md p-4 grid grid-cols-2 justify-center items-start">
-    {#if data.hasSubscription}
+    {#if $data?.hasSubscription}
       <!-- Usage Stats -->
       <div
         class="w-full p-4 col-span-1 grid grid-cols-2 gap-4 justify-items-center items-center text-lg text-stone-700">
@@ -215,6 +223,10 @@ const updateClipboard = (newClip) => {
           type="hidden"
           name="priceId"
           value="price_1KgVQASCiwhjjSk023JI30bF" />
+        <input
+          type="hidden"
+          name="customer"
+          value="{$data.customerId}" />
         <button
           class="bg-green-500 text-stone-50 px-4 py-2 rounded-lg shadow-md cursor-pointer"
           id="checkout-and-portal-button"

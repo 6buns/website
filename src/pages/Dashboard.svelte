@@ -14,13 +14,15 @@ const { state, send } = initAuth;
   <div
     class="relative w-screen h-screen flex flex-row min-h-full text-stone-700">
     <div class="w-80 px-4 py-8 font-sans flex flex-col justify-between">
-      <div class="flex flex-row items-center justify-start px-6 py-">
-        <img
-          src="./android-chrome-192x192.png"
-          class="mr-2 w-8 h-8"
-          alt="site icon" />
+      <div class="flex flex-row items-center justify-start px-2 py-2">
+        <div class="w-full flex flex-row items-center justify-start px-4 cursor-pointer">
+          <img
+            src="./android-chrome-192x192.png"
+            class="mr-2 w-8 h-8"
+            alt="site icon" />
+        </div>
       </div>
-      <div class="flex flex-col flex-grow justify-start px-2 py-6 space-y-6">
+      <div class="flex flex-col flex-grow justify-start px-2 py-6 space-y-4">
         <div class="flex flex-col space-y-2 py-2">
           <div
             class="w-full flex flex-row items-center font-bold justify-start px-4 rounded-md">
@@ -120,23 +122,27 @@ const { state, send } = initAuth;
           </div>
         </Link>
       </div>
-      <div
-        on:click="{() => send({ type: 'LOGOUT' })}"
-        class="w-full flex flex-row items-center justify-start px-4 py-2 my-4 rounded-md hover:bg-green-100 cursor-pointer">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="mr-2 h-4 w-4"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-          ></path>
-        </svg>
-        Logout
+      <div class="flex flex-col flex-grow-0 justify-start px-2 py-2">
+        <div
+          on:click="{() => send({ type: 'LOGOUT' })}"
+          class="w-full flex flex-row items-center justify-start px-4 py-2 font-bold rounded-md hover:bg-green-100 cursor-pointer">
+          Logout
+          <div class="flex flex-grow justify-end">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+              ></path>
+            </svg>
+          </div>
+        </div>
       </div>
     </div>
     <main class="w-full h-full p-8 bg-green-100">

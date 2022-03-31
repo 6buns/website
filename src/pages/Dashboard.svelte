@@ -1,20 +1,13 @@
 <script>
 import Account from "./Account.svelte";
 import { Link, Route, Router } from "svelte-navigator";
-// import { logout } from "../../firebase";
 import Service from "./Service.svelte";
-import { onMount } from "svelte";
-import { user } from "../store";
 import CreateSubscritionSuccess from "./CreateSubscritionSuccess.svelte";
 import CreateSubscriptionCancel from "./CreateSubscriptionCancel.svelte";
 import { initAuth } from "../auth";
 $: active = "dashboard";
-// $: customerId = $user?.customerId || "";
-// onMount(() => {
-//   console.log($user.customerId);
-// });
 
-const { send } = initAuth();
+const { state, send } = initAuth;
 </script>
 
 <Router>
@@ -79,7 +72,7 @@ const { send } = initAuth();
             Account
           </div>
         </Link>
-        <!-- <form
+        <form
           action="https://us-central1-vide-336112.cloudfunctions.net/createPortalSession"
           class="col-span-2 w-full flex items-center justify-center"
           method="POST">
@@ -87,14 +80,14 @@ const { send } = initAuth();
             type="hidden"
             id="customerId"
             name="customerId"
-            bind:value="{customerId}" />
+            bind:value="{$state.context.user.customerId}" />
           <button
             class="w-full flex flex-row items-center font-bold justify-start px-4 py-2 rounded-md hover:bg-green-100"
             class:selected="{active === 'payments'}"
             on:click="{() => (active = 'payments')}"
             id="checkout-and-portal-button"
             type="submit">Payments</button>
-        </form> -->
+        </form>
         <Link to="docs">
           <div
             class="w-full flex flex-row items-center font-bold justify-start px-4 py-2 rounded-md hover:bg-green-100"

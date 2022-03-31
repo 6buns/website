@@ -1168,14 +1168,14 @@ select {
 .aspect-\[4\/3\] {
   aspect-ratio: 4 / 3;
 }
+.h-screen {
+  height: 100vh;
+}
 .h-8 {
   height: 2rem;
 }
 .h-full {
   height: 100%;
-}
-.h-screen {
-  height: 100vh;
 }
 .h-4 {
   height: 1rem;
@@ -1226,14 +1226,14 @@ select {
 .min-h-full {
   min-height: 100%;
 }
-.w-full {
-  width: 100%;
+.w-screen {
+  width: 100vw;
 }
 .w-8 {
   width: 2rem;
 }
-.w-screen {
-  width: 100vw;
+.w-full {
+  width: 100%;
 }
 .w-80 {
   width: 20rem;
@@ -1322,29 +1322,8 @@ select {
   --tw-scale-y: 1.25;
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
 }
-.scale-150 {
-  --tw-scale-x: 1.5;
-  --tw-scale-y: 1.5;
-  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
-}
 .transform {
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
-}
-@-webkit-keyframes pulse {
-
-  50% {
-    opacity: .5;
-  }
-}
-@keyframes pulse {
-
-  50% {
-    opacity: .5;
-  }
-}
-.animate-pulse {
-  -webkit-animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-          animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 @-webkit-keyframes ping {
 
@@ -1364,27 +1343,37 @@ select {
   -webkit-animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
           animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
-@keyframes ping {
+@-webkit-keyframes bounce {
 
-  75%, 100% {
-    transform: scale(2);
-    opacity: 0;
+  0%, 100% {
+    transform: translateY(-25%);
+    -webkit-animation-timing-function: cubic-bezier(0.8,0,1,1);
+            animation-timing-function: cubic-bezier(0.8,0,1,1);
+  }
+
+  50% {
+    transform: none;
+    -webkit-animation-timing-function: cubic-bezier(0,0,0.2,1);
+            animation-timing-function: cubic-bezier(0,0,0.2,1);
   }
 }
-.animate-\[ping_1s_cubic-bezier\(0\2c _0\2c _0\.2\2c _1\)_infinite\] {
-  -webkit-animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
-          animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
-}
-@keyframes ping {
+@keyframes bounce {
 
-  75%, 100% {
-    transform: scale(2);
-    opacity: 0;
+  0%, 100% {
+    transform: translateY(-25%);
+    -webkit-animation-timing-function: cubic-bezier(0.8,0,1,1);
+            animation-timing-function: cubic-bezier(0.8,0,1,1);
+  }
+
+  50% {
+    transform: none;
+    -webkit-animation-timing-function: cubic-bezier(0,0,0.2,1);
+            animation-timing-function: cubic-bezier(0,0,0.2,1);
   }
 }
-.animate-\[ping_3s_cubic-bezier\(0\2c _0\2c _0\.2\2c _1\)_infinite\] {
-  -webkit-animation: ping 3s cubic-bezier(0, 0, 0.2, 1) infinite;
-          animation: ping 3s cubic-bezier(0, 0, 0.2, 1) infinite;
+.animate-bounce {
+  -webkit-animation: bounce 1s infinite;
+          animation: bounce 1s infinite;
 }
 .cursor-pointer {
   cursor: pointer;
@@ -1414,11 +1403,11 @@ select {
   grid-auto-rows: -webkit-max-content;
   grid-auto-rows: max-content;
 }
-.grid-cols-2 {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
 .grid-cols-1 {
   grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+.grid-cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .grid-cols-3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1567,11 +1556,6 @@ select {
   --tw-space-x-reverse: 0;
   margin-right: calc(-1rem * var(--tw-space-x-reverse));
   margin-left: calc(-1rem * calc(1 - var(--tw-space-x-reverse)));
-}
-.space-y-8 > :not([hidden]) ~ :not([hidden]) {
-  --tw-space-y-reverse: 0;
-  margin-top: calc(2rem * calc(1 - var(--tw-space-y-reverse)));
-  margin-bottom: calc(2rem * var(--tw-space-y-reverse));
 }
 .justify-self-start {
   justify-self: start;
@@ -1752,14 +1736,6 @@ select {
 }
 .bg-stone-200\/10 {
   background-color: rgb(231 229 228 / 0.1);
-}
-.bg-green-50 {
-  --tw-bg-opacity: 1;
-  background-color: rgb(240 253 244 / var(--tw-bg-opacity));
-}
-.bg-green-900 {
-  --tw-bg-opacity: 1;
-  background-color: rgb(20 83 45 / var(--tw-bg-opacity));
 }
 .fill-green-900 {
   fill: #14532d;

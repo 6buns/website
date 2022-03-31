@@ -6,8 +6,7 @@ import { initAuth } from "../auth";
 let open = false;
 const setOpen = () => (open = !open);
 
-onMount(() => console.log("Menu Mounted"));
-const { state, send } = initAuth();
+const { state, send } = initAuth;
 </script>
 
 <nav class="w-full py-2 px-8 md:px-16">
@@ -36,13 +35,17 @@ const { state, send } = initAuth();
       {#if $state.matches("signedOut")}
         <ul
           class="flex flex-row items-center justify-evenly space-x-6 capitalize cursor-pointer">
-          <li class="btn btn-outlined" on:click="{send('LOGIN')}">login</li>
+          <li class="btn btn-outlined" on:click="{() => send('LOGIN')}">
+            login
+          </li>
           <li class="btn btn-green">Signup</li>
         </ul>
       {:else}
         <ul
           class=" flex flex-row items-center justify-evenly space-x-6 capitalize cursor-pointer">
-          <li class="btn btn-outlined" on:click="{send('LOGOUT')}">Logout</li>
+          <li class="btn btn-outlined" on:click="{() => send('LOGOUT')}">
+            Logout
+          </li>
         </ul>
       {/if}
     </div>
@@ -81,13 +84,17 @@ const { state, send } = initAuth();
       {#if $state.matches("signedOut")}
         <ul
           class="mt-8 w-full p-4 flex flex-row items-center justify-evenly space-x-8">
-          <li class="btn btn-outlined" on:click="{send('LOGIN')}">Login</li>
+          <li class="btn btn-outlined" on:click="{() => send('LOGIN')}">
+            Login
+          </li>
           <li class="btn btn-green">Signup</li>
         </ul>
       {:else}
         <ul
           class="mt-8 w-full p-4 flex flex-row items-center justify-evenly space-x-8">
-          <li class="btn btn-outlined" on:click="{send('LOGOUT')}">Logout</li>
+          <li class="btn btn-outlined" on:click="{() => send('LOGOUT')}">
+            Logout
+          </li>
         </ul>
       {/if}
     </div>

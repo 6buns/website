@@ -1,13 +1,12 @@
-import { initializeApp } from 'firebase/app';
 import {
-    GoogleAuthProvider,
     onAuthStateChanged,
     signInWithPopup,
     signOut
 } from "firebase/auth";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { useMachine } from './useMachine';
 import { initAuthMachine } from './authMachine';
-import { auth } from '../../firebase';
+import { auth, googleProvider, db } from '../../firebase';
 
 const userMapper = claims => ({
     id: claims.user_id,
@@ -17,8 +16,7 @@ const userMapper = claims => ({
 });
 
 const loginWithGoogle = () => {
-    const provider = new GoogleAuthProvider();
-    return signInWithPopup(provider);
+    return signInWithPopup(auth, googleProvider);
 };
 
 // define XState services
@@ -29,7 +27,7 @@ const services = {
         new Promise((resolve, reject) => {
             const unsubscribe = onAuthStateChanged(auth, (user) => {
                 unsubscribe();
-                return resolve(user)
+                return user ? resolve(user) : reject('no user')
             }, (error) => reject(error));
         }),
     authenticator: (_, event) => {
@@ -38,10 +36,22 @@ const services = {
     loader: (ctx, _) => {
         return new Promise((resolve, reject) => {
             setTimeout(() => {
-                ctx.auth
-                    .getIdTokenResult()
-                    .then(({ claims }) => userMapper(claims))
-                    .then(resolve).catch(reject);
+                ctx.auth ?
+                    ctx.auth
+                        .getIdTokenResult()
+                        .then(({ claims }) => userMapper(claims))
+                        .then(async (user) => {
+                            const userData = await getDocs(
+                                query(collection(db, "customers"), where("userId", "==", user.id))
+                            );
+                            if (!userData.empty) {
+                                const data = userData.docs[0].data();
+                                console.log("User Data from firestore.", data);
+                                user = { ...user, ...data };
+                            }
+                            return user;
+                        })
+                        .then(resolve) : reject('No User');
             }, 1500);
         });
     },
@@ -50,6 +60,4 @@ const services = {
 
 const authMachine = initAuthMachine(services);
 
-export const initAuth = () => {
-    return useMachine(authMachine);
-};
+export const initAuth = useMachine(authMachine);

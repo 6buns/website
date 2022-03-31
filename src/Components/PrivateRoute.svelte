@@ -4,12 +4,12 @@ import Home from "../pages/Home.svelte";
 import { initAuth } from "../auth";
 import Loading from "./Loading.svelte";
 
-const { state, send } = initAuth();
+const { state, send } = initAuth;
 export let path;
 </script>
 
 <Route path="{path}" let:params let:location let:navigate>
-  {#if $state.matches("authenticating") || $state.matches("loading")}
+  {#if ["authenticating", "loading", "signingIn", "signingOut"].some($state.matches)}
     <Loading />
   {/if}
 

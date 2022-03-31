@@ -72,7 +72,7 @@ export default {
 		production && terser(),
 
 		replace({
-			"process.env.NODE_ENV": process.env.NODE_ENV
+			"process.env.NODE_ENV": process.env.NODE_ENV,
 		})
 	],
 	watch: {

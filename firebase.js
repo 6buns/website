@@ -3,7 +3,7 @@ import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore} from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: process.env.API_KEY,
+  apiKey: "AIzaSyB-FqYcQw3aZl7fvs139nHZZe1HEVHhhQs",
   authDomain: "vide-336112.firebaseapp.com",
   projectId: "vide-336112",
   storageBucket: "vide-336112.appspot.com",

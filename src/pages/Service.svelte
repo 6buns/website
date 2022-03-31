@@ -147,7 +147,7 @@ const { state, send } = initAuth;
         <span class="text-xs font-mono -my-2">Click below to copy.</span>
         <h3
           class="col-span-1 font-mono justify-self-stretch break-all bg-green-100 p-4 rounded-lg cursor-pointer"
-          on:click="{() => updateClipboard(data.key)}">
+          on:click="{() => updateClipboard(data?.key)}">
           {data.key}
         </h3>
       </div>

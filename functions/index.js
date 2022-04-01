@@ -6,7 +6,9 @@ admin.initializeApp(functions.config().firebase);
 
 const stripe = require("stripe")(functions.config().stripe.testkey);
 const firestore = admin.firestore();
-const YOUR_DOMAIN = "https://6buns.com";
+// const YOUR_DOMAIN = "https://6buns.com";
+const YOUR_DOMAIN = "http://localhost:5000";
+
 
 // // Create and Deploy Your First Cloud Functions
 // // https://firebase.google.com/docs/functions/write-firebase-functions
@@ -119,7 +121,7 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
 });
 
 exports.createCheckoutSession = functions.https.onRequest(async (req, res) => {
-  const {priceId, customer} = req.body;
+  const { priceId, customerId } = req.body;
 
   const session = await stripe.checkout.sessions.create({
     line_items: [
@@ -127,8 +129,8 @@ exports.createCheckoutSession = functions.https.onRequest(async (req, res) => {
         price: priceId,
       },
     ],
-    customer,
-    customer_creation: "if_required",
+    customer: customerId,
+    billing_address_collection: "auto",
     mode: "subscription",
     success_url: `${YOUR_DOMAIN}/subscription/success/{CHECKOUT_SESSION_ID}`,
     cancel_url: `${YOUR_DOMAIN}/subscription/cancel`,
@@ -138,7 +140,7 @@ exports.createCheckoutSession = functions.https.onRequest(async (req, res) => {
 });
 
 exports.createPortalSession = functions.https.onRequest(async (req, res) => {
-  const {sessionId, customerId} = req.body;
+  const { sessionId, customerId } = req.body;
   console.log(`${customerId ? customerId : sessionId}`);
   const returnUrl = YOUR_DOMAIN;
   let portalSession = "";

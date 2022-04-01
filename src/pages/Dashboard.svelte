@@ -5,6 +5,7 @@ import Service from "./Service.svelte";
 import CreateSubscritionSuccess from "./CreateSubscritionSuccess.svelte";
 import CreateSubscriptionCancel from "./CreateSubscriptionCancel.svelte";
 import { initAuth } from "../auth";
+import { FUNCTIONS_URL } from "../store";
 $: active = "dashboard";
 
 const { state, send } = initAuth;
@@ -15,7 +16,8 @@ const { state, send } = initAuth;
     class="relative w-screen h-screen flex flex-row min-h-full text-stone-700">
     <div class="w-80 px-4 py-8 font-sans flex flex-col justify-between">
       <div class="flex flex-row items-center justify-start px-2 py-2">
-        <div class="w-full flex flex-row items-center justify-start px-4 cursor-pointer">
+        <div
+          class="w-full flex flex-row items-center justify-start px-4 cursor-pointer">
           <img
             src="./android-chrome-192x192.png"
             class="mr-2 w-8 h-8"
@@ -75,7 +77,7 @@ const { state, send } = initAuth;
           </div>
         </Link>
         <form
-          action="https://us-central1-vide-336112.cloudfunctions.net/createPortalSession"
+          action="{`${$FUNCTIONS_URL}/createPortalSession`}"
           class="col-span-2 w-full flex items-center justify-center"
           method="POST">
           <input

@@ -1,9 +1,12 @@
 <script>
 import { Link } from "svelte-navigator";
+import { initAuth } from "../auth";
+import { FUNCTIONS_URL } from "../store";
 
+const { state, send } = initAuth;
+
+let data = $state.context.user;
 export let id = undefined;
-
-$:data = $state.context.user;
 
 /**
  * {
@@ -37,10 +40,6 @@ const updateClipboard = (newClip) => {
     }
   });
 };
-
-import { initAuth } from "../auth";
-
-const { state, send } = initAuth;
 </script>
 
 <div class="w-full h-full -my-4 flex flex-col items-center justify-center">
@@ -63,7 +62,7 @@ const { state, send } = initAuth;
   </nav>
   <div
     class="w-full h-full bg-white rounded-2xl shadow-md p-4 grid grid-cols-2 justify-center items-start">
-    {#if $data?.hasSubscription}
+    {#if data?.hasSubscription}
       <!-- Usage Stats -->
       <div
         class="w-full p-4 col-span-1 grid grid-cols-2 gap-4 justify-items-center items-center text-lg text-stone-700">
@@ -75,7 +74,7 @@ const { state, send } = initAuth;
           free usage quota
         </h1>
         <h3 class="font-serif font-bold justify-self-end">
-          {300 - data.usage < 0 ? 300 : 300 - data.usage} peer-minute
+          {300 - data?.usage < 0 ? 300 : 300 - data?.usage} peer-minute
         </h3>
 
         <!-- extra usage -->
@@ -83,9 +82,9 @@ const { state, send } = initAuth;
           additional usage
         </h1>
 
-        {#if data.usage - 300 > 0}
+        {#if data?.usage - 300 > 0}
           <h3 class="font-serif font-bold justify-self-end">
-            {data.usage - 300}
+            {data?.usage - 300}
             <span class="text-sm italic text-stone-700/80">peer-minute</span>
           </h3>
         {:else}
@@ -97,7 +96,7 @@ const { state, send } = initAuth;
           total usage
         </h1>
         <h3 class="font-serif font-bold justify-self-end">
-          {data.usage} peer-minute
+          {data?.usage} peer-minute
         </h3>
 
         <!-- charge accumulated -->
@@ -105,7 +104,7 @@ const { state, send } = initAuth;
           approximate charge
         </h1>
         <h3 class="font-serif font-bold justify-self-end">
-          $ {data.usage - 300 > 0 ? 3 + (data.usage - 300) * 0.015 : 3}
+          $ {data?.usage - 300 > 0 ? 3 + (data?.usage - 300) * 0.015 : 3}
         </h3>
       </div>
 
@@ -120,21 +119,21 @@ const { state, send } = initAuth;
           total rooms created
         </h1>
         <h3 class="font-serif font-bold justify-self-end">
-          {data.rooms}
+          {data?.rooms}
         </h3>
 
         <!-- average peers per room count -->
         <h1 class="col-span-1 capitalize font-mono justify-self-start">
           average peers per room
         </h1>
-        <h3 class="font-serif font-bold justify-self-end">{data.avgPeer}</h3>
+        <h3 class="font-serif font-bold justify-self-end">{data?.avgPeer}</h3>
 
         <!-- average room duration -->
         <h1 class="col-span-1 capitalize font-mono justify-self-start">
           average room duration
         </h1>
         <h3 class="font-serif font-bold justify-self-end">
-          {data.avgDuration}
+          {data?.avgDuration}
         </h3>
       </div>
 
@@ -148,7 +147,7 @@ const { state, send } = initAuth;
         <h3
           class="col-span-1 font-mono justify-self-stretch break-all bg-green-100 p-4 rounded-lg cursor-pointer"
           on:click="{() => updateClipboard(data?.key)}">
-          {data.key}
+          {data?.key}
         </h3>
       </div>
 
@@ -164,7 +163,7 @@ const { state, send } = initAuth;
         </h1>
         <h3 class="font-serif font-bold justify-self-end">
           {new Intl.DateTimeFormat(["ban", "id"]).format(
-            new Date(data.paymentDate)
+            new Date(data?.paymentDate)
           )}
         </h3>
 
@@ -174,7 +173,7 @@ const { state, send } = initAuth;
         </h1>
         <h3 class="font-serif font-bold justify-self-end">
           {new Intl.DateTimeFormat(["ban", "id"]).format(
-            new Date(data.dueDate)
+            new Date(data?.dueDate)
           )}
         </h3>
 
@@ -217,16 +216,13 @@ const { state, send } = initAuth;
       </table>
       <form
         class="col-span-2 w-full flex items-center justify-center"
-        action="https://us-central1-vide-336112.cloudfunctions.net/createCheckoutSession"
+        action="{`${$FUNCTIONS_URL}/createCheckoutSession`}"
         method="post">
         <input
           type="hidden"
           name="priceId"
           value="price_1KgVQASCiwhjjSk023JI30bF" />
-        <input
-          type="hidden"
-          name="customer"
-          value="{$data.customerId}" />
+        <input type="hidden" name="customer" value="{data?.customerId}" />
         <button
           class="bg-green-500 text-stone-50 px-4 py-2 rounded-lg shadow-md cursor-pointer"
           id="checkout-and-portal-button"

@@ -1784,10 +1784,6 @@ select {
   padding-top: 2rem;
   padding-bottom: 2rem;
 }
-.px-6 {
-  padding-left: 1.5rem;
-  padding-right: 1.5rem;
-}
 .px-2 {
   padding-left: 0.5rem;
   padding-right: 0.5rem;
@@ -1807,6 +1803,10 @@ select {
 .px-0 {
   padding-left: 0px;
   padding-right: 0px;
+}
+.px-6 {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
 }
 .py-10 {
   padding-top: 2.5rem;
@@ -1863,12 +1863,6 @@ select {
 }
 .pl-3 {
   padding-left: 0.75rem;
-}
-.pt-2 {
-  padding-top: 0.5rem;
-}
-.pb-6 {
-  padding-bottom: 1.5rem;
 }
 .text-left {
   text-align: left;

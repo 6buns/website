@@ -1,5 +1,8 @@
 <script>
-  import { user } from "../store";
+import { initAuth } from "../auth";
+
+const { state, send } = initAuth;
+let data = $state.context.user;
 </script>
 
 <div
@@ -13,7 +16,7 @@
       <h4
         class="px-4 py-2 hover:bg-stone-200 cursor-pointer rounded-lg"
         on:click={() => console.log("change name")}>
-        Aditya Jha
+        {data.name}
       </h4>
     </div>
     <div
@@ -22,7 +25,7 @@
       <h4
         class="px-4 py-2 hover:bg-stone-200 cursor-pointer rounded-lg"
         on:click={() => console.log("change email id")}>
-        adtjha@gmail.com
+        {data.email}
       </h4>
     </div>
     <div
@@ -31,16 +34,7 @@
       <h4
         class="px-4 py-2 hover:bg-stone-200 cursor-pointer rounded-lg"
         on:click={() => console.log("change email id")}>
-        +919156518821
-      </h4>
-    </div>
-    <div
-      class="w-full grid grid-cols-2 px-4 items-center justify-start text-2xl">
-      <h4 class="text-xl capitalize text-stone-500">password</h4>
-      <h4
-        class="px-4 py-2 hover:bg-stone-200 cursor-pointer rounded-lg"
-        on:click={() => console.log("change password")}>
-        ••••••••
+        {data.phone}
       </h4>
     </div>
   </div>
@@ -53,16 +47,7 @@
       <h4
         class="px-4 py-2 hover:bg-stone-200 cursor-pointer rounded-lg"
         on:click={() => console.log("change client id")}>
-        36fae4dd4ee62434c49b7255911ecfad
-      </h4>
-    </div>
-    <div
-      class="w-full grid grid-cols-2 px-4 items-center justify-start text-2xl">
-      <h4 class="text-xl capitalize text-stone-500">client secret</h4>
-      <h4
-        class="px-4 py-2 hover:bg-stone-200 cursor-pointer rounded-lg"
-        on:click={() => console.log("change client secret")}>
-        ••••••••••••••••••••••••
+        {data?.apiKey}
       </h4>
     </div>
   </div>

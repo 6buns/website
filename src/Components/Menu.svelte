@@ -1,7 +1,4 @@
 <script>
-import { user } from "../store";
-// import { login, logout } from "../../firebase";
-import { onMount } from "svelte";
 import { initAuth } from "../auth";
 let open = false;
 const setOpen = () => (open = !open);

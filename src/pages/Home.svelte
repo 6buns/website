@@ -22,8 +22,6 @@ import Games from "../Components/home/displays/Games.svelte";
 import Medical from "../Components/home/displays/Medical.svelte";
 import Service from "../Components/home/displays/Service.svelte";
 import { onDestroy } from "svelte";
-import { flip } from "svelte/animate";
-import { user } from "../store";
 let current = { key: "games", component: Games },
   currentArray = [
     { key: "games", component: Games },

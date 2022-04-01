@@ -73,6 +73,7 @@ export default {
 
 		replace({
 			"process.env.NODE_ENV": process.env.NODE_ENV,
+			isProduction: production,
 		})
 	],
 	watch: {

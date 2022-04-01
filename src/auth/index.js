@@ -12,6 +12,7 @@ const userMapper = claims => ({
     id: claims.user_id,
     name: claims.name,
     email: claims.email,
+    phone: claims.phone,
     picture: claims.picture
 });
 
@@ -41,15 +42,18 @@ const services = {
                         .getIdTokenResult()
                         .then(({ claims }) => userMapper(claims))
                         .then(async (user) => {
-                            const userData = await getDocs(
-                                query(collection(db, "customers"), where("userId", "==", user.id))
-                            );
-                            if (!userData.empty) {
-                                const data = userData.docs[0].data();
-                                console.log("User Data from firestore.", data);
-                                user = { ...user, ...data };
+                            try {
+                                const userData = await getDocs(
+                                    query(collection(db, "customers"), where("userId", "==", user.id))
+                                );
+                                if (!userData.empty) {
+                                    const data = userData.docs[0].data();
+                                    user = { ...user, ...data };
+                                }
+                                return user;
+                            } catch (error) {
+                                return reject(error)
                             }
-                            return user;
                         })
                         .then(resolve) : reject('No User');
             }, 1500);

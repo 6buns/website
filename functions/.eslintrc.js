@@ -13,6 +13,7 @@ module.exports = {
     "google",
   ],
   rules: {
-    quotes: ["error", "double"],
+    "quotes": ["error", "double"],
+    "object-curly-spacing": [2, "always"],
   },
 };

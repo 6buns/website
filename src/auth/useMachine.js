@@ -17,8 +17,6 @@ export const useMachine = (config, options) => {
             set(state);
         });
 
-        service.onChange(console.log)
-
         service.onSend(e => console.log(e))
 
         // start the machine

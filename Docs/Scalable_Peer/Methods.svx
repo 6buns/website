@@ -1,0 +1,31 @@
+# Methods
+
+## remoteStream(id?)
+
+```js
+bun.remoteStreams(peer_id) // returns media stream fo remote peers
+bun.remoteStreams() // returns all remote peers media streams
+```
+
+When called with an peer_id, it returns a mediastream of the remote peer. It can also be called without an peer_id, in which case, it returns all the media streams of all the remote peers in the room.
+
+## screenShare()
+
+```js
+bun.screenShare() // shares the screen
+```
+
+Method should be called when you need to start screen sharing.
+
+## stopMedia(type, id)
+
+```js
+bun.stopMedia('video', '#####')
+```
+
+Stop the media type, of the peer id provided. Different options of media type are
+
+- video
+- audio
+
+If peer id is empty, it stops the media of the user.

@@ -1,0 +1,10 @@
+# Events
+
+| Event            | Fired When                                   |
+| ---------------- | -------------------------------------------- |
+| room-join        | user has joined the room successfully        |
+| new-peer         | new peer has joined the room                 |
+| peer-left        | a peer leaves the room                       |
+| new-remote-track | peer has added a new track to the connection |
+| error            | some error has occured                       |
+

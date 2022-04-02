@@ -51,4 +51,15 @@
     @apply font-bold border border-green-500;
   }
 
+  span.string.token {
+    @apply text-green-400
+  }
+
+  span.comment.token {
+    @apply text-pink-400
+  }
+
+  span.token.keyword {
+    @apply text-blue-400
+  }
 }

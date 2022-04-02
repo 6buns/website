@@ -1,0 +1,33 @@
+# Getting Started
+
+6buns **scalable peer** enables you to integrate webrtc peer connection, in simple lines of code. All you have to do is create event handlers,  to handle events and some methods in order to initiate, or close connections. It can handle a video room of 4 peers, and an audio room of 8 peers. It uses our own backend to (STUN/TURN & Signalling servers) to create RTCPeerconnections.
+
+## Installation
+
+The simplest and fastest way to get up and running with 6buns scalable peer from scratch is with using a CDN.
+
+### CDN
+
+```html
+<script src="https://unpkg.com/6buns-client@1.0.9/dist/bundle.js" crossorigin />
+```
+
+Put the script tag in your main index.html file, and you are good to go. All the events and methods are available once the script is loaded.
+
+### Package Manager
+
+There is another way of integrating scalable peer into your project, and that is by installing it using NPM.
+
+Using NPM
+
+```bash
+npm install 6buns-client
+```
+
+Using Yarn
+
+```bash
+yarn add 6buns-client
+```
+
+Once the package is installed, you can start integrating it into your application. Node package can only be used if your app is client side rendering, if its server side rendering then you should opt in for using CDN.

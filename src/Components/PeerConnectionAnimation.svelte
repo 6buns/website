@@ -1,9 +1,4 @@
 <style>
-#screen {
-  stroke-width: 2px;
-  stroke: black;
-  stroke-dasharray: 2;
-}
 #status {
   transform: translateY(calc(var(--currentIndex) * -25%));
   transition: transform 600ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -80,6 +75,9 @@ animateService.onTransition((state) => {
     case "user2Server":
       el("rightCurve").strokeDashoffset = 0;
       el("leftCurve").strokeDashoffset = 0;
+      document.getElementById("rightCurve").children[0].style.stroke =
+        "#22c55e";
+      document.getElementById("leftCurve").children[0].style.stroke = "#22c55e";
       rightArrow = setInterval(() => {
         el("rightCurve").strokeDashoffset++;
         el("leftCurve").strokeDashoffset--;
@@ -87,6 +85,10 @@ animateService.onTransition((state) => {
       setTimeout(() => {
         send("NEXT");
         clearInterval(rightArrow);
+        document.getElementById("rightCurve").children[0].style.stroke =
+          "#292524";
+        document.getElementById("leftCurve").children[0].style.stroke =
+          "#292524";
       }, gap);
       break;
     case "user1User2Connect":
@@ -115,7 +117,7 @@ onDestroy(() => {
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 400 300"
     fill="none">
-    <foreignObject x="5" y="190" width="110" height="71">
+    <foreignObject id="screen1" x="5" y="190" width="110" height="71">
       <div
         class="w-[110px] h-[71px] p-[5px] border-2 border-dotted border-stone-900 rounded-xl flex flex-wrap flex-row items-center justify-evenly">
         <svg
@@ -157,7 +159,7 @@ onDestroy(() => {
       </div>
     </foreignObject>
 
-    <foreignObject x="285" y="190" width="110" height="71">
+    <foreignObject id="screen2" x="285" y="190" width="110" height="71">
       <div
         class="w-[110px] h-[71px] p-[5px] border-2 border-dotted border-stone-900 rounded-xl flex flex-wrap flex-row items-center justify-evenly">
         <svg
@@ -199,8 +201,6 @@ onDestroy(() => {
         {/if}
       </div>
     </foreignObject>
-
-    <!-- <rect id="screen" x="285" y="190" width="110" height="71" rx="12"></rect> -->
 
     {#if $currentIndex === 3}
       <svg

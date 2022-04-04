@@ -22,6 +22,7 @@ import Games from "../Components/home/displays/Games.svelte";
 import Medical from "../Components/home/displays/Medical.svelte";
 import Service from "../Components/home/displays/Service.svelte";
 import { onDestroy } from "svelte";
+import PeerConnectionAnimation from "../Components/PeerConnectionAnimation.svelte";
 let current = { key: "games", component: Games },
   currentArray = [
     { key: "games", component: Games },
@@ -164,7 +165,8 @@ onDestroy(() => {
             on:click="{() => {
               enlarged = enlarged === 2 ? '' : 2;
             }}">
-            <img class="object-center object-cover" src="./webrtc.png" alt="" />
+            <!-- <img class="object-center object-cover" src="./webrtc.png" alt="" /> -->
+            <PeerConnectionAnimation />
           </div>
           <div class="px-0 md:px-12 w-full md:w-[484px] order-1 md:order-2">
             <h1 class="text-2xl font-serif font-bold">Scalable Peer</h1>

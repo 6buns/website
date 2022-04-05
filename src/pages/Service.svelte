@@ -8,23 +8,6 @@ const { state, send } = initAuth;
 let data = $state.context.user;
 export let id = undefined;
 
-/**
- * {
-  hasSubscription: false,
-  // usage
-  usage: 650,
-  // room
-  rooms: 42,
-  avgPeer: 2,
-  avgDuration: 24,
-  // api
-  key: "d164d0068203d0759a2de329917e4d08b66564a85d8d43a6d5af52daececb25ea86089a4cd27baa7f58bddefc6f5851b20e0736f4ab497a392b61b0c8c01d20ab3d24b1037a4db8a87d766bc221245f1be56b9e922d5a527443e03f9c35322b3497977",
-  // payment
-  paymentDate: 1648550680365,
-  dueDate: 1649155521611,
-}
- */
-
 const updateClipboard = (newClip) => {
   navigator.permissions.query({ name: "clipboard-write" }).then((result) => {
     if (result.state == "granted" || result.state == "prompt") {
@@ -202,15 +185,15 @@ const updateClipboard = (newClip) => {
         <tbody>
           <tr>
             <td class="border border-stone-200 p-4 pl-8 text-stone-700"
-              >Single plan ( includes 150 peer-minute / week )</td>
+              >Single plan ( includes 50 peer-minutes / week )</td>
             <td class="border border-stone-200 p-4 pr-8 text-stone-700"
-              >$3.00 / week</td>
+              >$1.00 / week</td>
           </tr>
           <tr>
             <td class="border border-stone-200 p-4 pl-8 text-stone-700"
               >Overage Charges</td>
             <td class="border border-stone-200 p-4 pr-8 text-stone-700"
-              >$0.02 / peer-minute</td>
+              >$1 per 50 peer-minutes</td>
           </tr>
         </tbody>
       </table>
@@ -221,7 +204,7 @@ const updateClipboard = (newClip) => {
         <input
           type="hidden"
           name="priceId"
-          value="price_1KgVQASCiwhjjSk023JI30bF" />
+          value="price_1KlKqhSCiwhjjSk0rNqbNZiY" />
         <input type="hidden" name="customer" value="{data?.customerId}" />
         <button
           class="bg-green-500 text-stone-50 px-4 py-2 rounded-lg shadow-md cursor-pointer"

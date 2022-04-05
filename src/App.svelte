@@ -10,18 +10,18 @@ import Docs from "./pages/Docs.svelte";
 
 <Router>
   <div>
-    <Route path="/pricing">
+    <!-- <Route path="/pricing">
       <Pricing />
-    </Route>
-    <Route path="/products">
+    </Route> -->
+    <!-- <Route path="/products">
       <Products />
-    </Route>
+    </Route> -->
     <Route path="/docs/*">
       <Docs />
     </Route>
-    <Route path="/faq">
+    <!-- <Route path="/faq">
       <FAQ />
-    </Route>
+    </Route> -->
     <PrivateRoute path="/*" let:location>
       <Dashboard />
     </PrivateRoute>

@@ -6,8 +6,8 @@ admin.initializeApp(functions.config().firebase);
 
 const stripe = require("stripe")(functions.config().stripe.testkey);
 const firestore = admin.firestore();
-// const YOUR_DOMAIN = "https://6buns.com";
-const YOUR_DOMAIN = "http://localhost:5000";
+const YOUR_DOMAIN = "https://6buns.com";
+// const YOUR_DOMAIN = "http://localhost:5000";
 
 
 // // Create and Deploy Your First Cloud Functions

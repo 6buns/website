@@ -1,12 +1,41 @@
 <script>
 import Account from "./Account.svelte";
-import { Link, Route, Router } from "svelte-navigator";
+import { Link, Route, Router, useLocation } from "svelte-navigator";
 import Service from "./Service.svelte";
 import CreateSubscritionSuccess from "./CreateSubscritionSuccess.svelte";
 import CreateSubscriptionCancel from "./CreateSubscriptionCancel.svelte";
 import { initAuth } from "../auth";
 import { FUNCTIONS_URL } from "../store";
+import { onMount } from "svelte";
+const location = useLocation();
 $: active = "dashboard";
+
+onMount(() => {
+  const name = $location.pathname;
+  const path = name.split("/")[1];
+  // console.log(name, path);
+  if (path === "") {
+    active = "dashboard";
+  } else {
+    switch (path) {
+      case "account":
+        active = "account";
+        break;
+      case "rooms":
+        active = "rooms";
+        break;
+      case "payments":
+        active = "payments";
+        break;
+      case "docs":
+        active = "docs";
+        break;
+      default:
+        active = "";
+        break;
+    }
+  }
+});
 
 const { state, send } = initAuth;
 </script>
@@ -51,8 +80,8 @@ const { state, send } = initAuth;
           <Link to="/rooms">
             <div
               class="w-fill flex flex-row items-center justify-start mx-6 mr-0 px-2 py-1 rounded-md hover:bg-green-100"
-              class:selected="{active === 'all'}"
-              on:click="{() => (active = 'all')}">
+              class:selected="{active === 'rooms'}"
+              on:click="{() => (active = 'rooms')}">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 class="h-4 w-4 mr-2"

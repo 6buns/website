@@ -50,8 +50,10 @@ let index = 0;
 
 // console.log("USER", $user);
 let rc = 1;
+let uc = 2;
 let rd = 20;
-$: charge = 0.05 * rc * rd;
+$: peerMin = rc * rd * uc;
+$: charge = Math.ceil(peerMin / 50) * 1;
 const nn = (n) => {
   return Number.isNaN(n)
     ? Number.isSafeInteger(parseFloat(n))
@@ -154,7 +156,9 @@ onDestroy(() => {
     <section
       id="products"
       class="my-auto flex flex-col items-center justify-center">
-      <h1 class="mb-6 text-4xl font-serif font-bold">Product</h1>
+      <h1 class="mb-6 text-8xl text-stone-700/30 font-serif font-bold">
+        Product
+      </h1>
       <div
         class="w-full grid grid-rows-1 space-y-12 items-stretch justify-center justify-items-center content-center">
         <div
@@ -200,7 +204,9 @@ onDestroy(() => {
     <section
       id="pricing"
       class="my-auto w-full flex flex-col items-center justify-center">
-      <h1 class="mb-6 text-4xl font-serif font-bold">Pricing</h1>
+      <h1 class="mb-6 text-8xl text-stone-700/30 font-serif font-bold">
+        Pricing
+      </h1>
       <div
         class="w-full grid grid-rows-1 items-center md:items-start justify-items-center gap-8 md:gap-24">
         <div class="flex flex-col items-center justify-center">
@@ -209,14 +215,16 @@ onDestroy(() => {
           </h3>
           <h1
             class="text-5xl sm:text-6xl md:text-8xl font-serif font-bold text-center">
-            $9<span class="text-lg sm:text-xl md:text-2xl text-stone-700"
-              >/week</span>
+            $1 <span class="text-lg sm:text-xl md:text-2xl text-stone-700">
+              / week</span>
           </h1>
-          <h3 class="text-4xl font-serif font-bold text-center">
-            10 free rooms included
+          <h3 class="text-4xl font-serif font-bold text-center block">
+            50 peer-min included
           </h3>
-          <!-- extra ${charge} per room of <input bind:value={min} /> minutes will be charged after 10 rooms. -->
-          <div class="w-full flex flex-col md:flex-row content-start">
+          <h6 class="text-base font-normal font-mono">
+            overage charges $1 per 50 peer-min
+          </h6>
+          <div class="w-full flex flex-col content-start">
             <div class="w-full flex-grow md:w-11/12 p-4 m-auto">
               <div
                 class="w-full rounded-2xl bg-stone-50 overflow-hidden shadow">
@@ -251,7 +259,7 @@ onDestroy(() => {
                     <div
                       class="w-full lg:w-1/2 m-auto lg:m-0 px-6 md:px-12 py-4 bg-green-100 flex flex-col">
                       <span class="text-stone-700 text-2xl font-mono font-bold">
-                        $9/week</span>
+                        $1/week</span>
                     </div>
                   </div>
 
@@ -263,9 +271,10 @@ onDestroy(() => {
                         Usage Cost</span>
                       <span class="text-stone-500 text-sm font-mono">
                         <a href="#consumer"
-                          >Based on room-min, a room created for 20 minutes is
-                          20 room-min. Similarly, 20 rooms each having a
-                          duration of 20 minutes sums upto 400 room-min</a>
+                          >Based on peer-min, a room created for 20 minutes with
+                          2 peers is 40 peer-min. Similarly, 20 rooms each
+                          having 2 peers, and a duration of 20 minutes sums upto
+                          800 peer-min</a>
                       </span>
                     </div>
                     <svg
@@ -281,18 +290,21 @@ onDestroy(() => {
                     <div
                       class="w-full lg:w-1/2 m-auto lg:m-0 px-6 md:px-12 py-4 bg-green-100 text-stone-700 flex flex-col">
                       <span class="text-stone-700 text-2xl font-mono font-bold"
-                        >0.05/room-min</span>
+                        >$1 per 50 peer-min</span>
                       <span class="text-stone-500 text-sm font-mono">
-                        For a 20 minute room, $1 (20 x 0.05) will be charged.
+                        For a 25 minute room, $1 (25 x 2 x 0.02) will be
+                        charged.
                       </span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-            <div class="w-full md:w-1/2 p-4 m-auto space-y-4 ">
-              <div class="bg-stone-50 text-stone-800 rounded-2xl shadow">
-                <div class="w-full px-6 md:px-12 py-4 flex flex-col space-y-2">
+            <div
+              class="w-full md:w-11/12 flex md:flex-row flex-col p-4 m-auto space-y-4 md:space-y-0 md:space-x-2">
+              <div
+                class="w-1/2 space-y-1 py-4 bg-stone-50 text-stone-800 rounded-2xl shadow">
+                <div class="w-full px-4 md:px-8 py-1 flex flex-col space-y-2">
                   <div
                     class="flex flex-row items-stretch justify-between content-between">
                     <label
@@ -310,8 +322,25 @@ onDestroy(() => {
                     class="block w-full h-1 appearance-none rounded-md bg-stone-300 border-transparent accent-green-500 focus:border-stone-500 focus:bg-stone-500 focus:ring-0"
                     bind:value="{rc}" />
                 </div>
-
-                <div class="w-full px-6 md:px-12 py-4 flex flex-col space-y-2">
+                <div class="w-full px-4 md:px-8 py-1 flex flex-col space-y-2">
+                  <div
+                    class="flex flex-row items-stretch justify-between content-between">
+                    <label
+                      for="userCount"
+                      class="text-stone-700 text-base font-serif font-bold"
+                      >peers in a single room</label>
+                    <span class="text-stone-700 text-lg font-serif font-bold"
+                      >{uc}</span>
+                  </div>
+                  <input
+                    name="userCount"
+                    type="range"
+                    min="1"
+                    max="8"
+                    class="block w-full h-1 appearance-none rounded-md bg-stone-300 border-transparent accent-green-500 focus:border-stone-500 focus:bg-stone-500 focus:ring-0"
+                    bind:value="{uc}" />
+                </div>
+                <div class="w-full px-4 md:px-8 py-1 flex flex-col space-y-2">
                   <div
                     class="flex flex-row items-stretch justify-between content-between">
                     <label
@@ -325,17 +354,40 @@ onDestroy(() => {
                     name="roomDuration"
                     type="range"
                     min="1"
-                    max="60"
+                    max="1440"
                     class="block w-full h-1 appearance-none rounded-md bg-stone-300 border-transparent accent-green-500 focus:border-stone-500 focus:bg-stone-500 focus:ring-0"
                     bind:value="{rd}" />
                 </div>
-
+              </div>
+              <div
+                class="w-1/2 py-4 flex flex-col space-y-1 bg-stone-50 text-stone-800 rounded-2xl shadow">
                 <div
-                  class="w-full px-6 md:px-12 py-4 flex flex-row items-stretch justify-between content-between">
+                  class="w-full px-4 md:px-8 py-1 flex flex-row items-stretch justify-between content-between">
+                  <span class="text-stone-500 text-base font-mono uppercase"
+                    >total peer-min</span>
+                  <span class="text-stone-500 text-lg font-mono"
+                    >{nn(peerMin)}</span>
+                </div>
+                <div
+                  class="w-full px-4 md:px-8 py-1 flex flex-row items-stretch justify-between content-between">
+                  <span class="text-stone-700 text-base font-serif font-bold"
+                    >Weekly Subscription Charge</span>
+                  <span class="text-stone-700 text-lg font-serif font-bold"
+                    >$1</span>
+                </div>
+                <div
+                  class="w-full px-4 md:px-8 py-1 flex flex-row items-stretch justify-between content-between">
+                  <span class="text-stone-700 text-base font-serif font-bold"
+                    >Overage Charge</span>
+                  <span class="text-stone-700 text-lg font-serif font-bold"
+                    >{charge > 1 ? `$ ${nn(charge - 1)}` : `-`}</span>
+                </div>
+                <div
+                  class="w-full px-4 md:px-8 py-1 flex flex-row items-stretch justify-between content-between">
                   <span class="text-stone-700 text-base font-serif font-bold"
                     >Total Charge</span>
                   <span class="text-stone-700 text-lg font-serif font-bold"
-                    >$ {nn(charge)}</span>
+                    >$ {nn(charge > 1 ? charge : 1)}</span>
                 </div>
               </div>
             </div>

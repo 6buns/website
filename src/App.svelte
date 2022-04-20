@@ -2,10 +2,11 @@
 import { Route, Router } from "svelte-navigator";
 import PrivateRoute from "./Components/PrivateRoute.svelte";
 import Dashboard from "./pages/Dashboard.svelte";
-import Products from "./pages/Products.svelte";
-import Pricing from "./pages/Pricing.svelte";
-import FAQ from "./pages/FAQ.svelte";
+// import Products from "./pages/Products.svelte";
+// import Pricing from "./pages/Pricing.svelte";
+// import FAQ from "./pages/FAQ.svelte";
 import Docs from "./pages/Docs.svelte";
+import Demo from "./pages/Demo.svelte";
 </script>
 
 <Router>
@@ -19,9 +20,9 @@ import Docs from "./pages/Docs.svelte";
     <Route path="/docs/*">
       <Docs />
     </Route>
-    <!-- <Route path="/faq">
-      <FAQ />
-    </Route> -->
+    <Route path="/demo">
+      <Demo />
+    </Route>
     <PrivateRoute path="/*" let:location>
       <Dashboard />
     </PrivateRoute>

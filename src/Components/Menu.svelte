@@ -35,7 +35,7 @@ const { state, send } = initAuth;
           <li class="btn btn-outlined" on:click="{() => send('LOGIN')}">
             login
           </li>
-          <li class="btn btn-green">Signup</li>
+          <!-- <li class="btn btn-green">Signup</li> -->
         </ul>
       {:else}
         <ul
@@ -84,7 +84,7 @@ const { state, send } = initAuth;
           <li class="btn btn-outlined" on:click="{() => send('LOGIN')}">
             Login
           </li>
-          <li class="btn btn-green">Signup</li>
+          <!-- <li class="btn btn-green">Signup</li> -->
         </ul>
       {:else}
         <ul

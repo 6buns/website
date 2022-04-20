@@ -204,7 +204,7 @@ const updateClipboard = (newClip) => {
         <input
           type="hidden"
           name="priceId"
-          value="price_1KlKqhSCiwhjjSk0rNqbNZiY" />
+          value="price_1KqmOQSCiwhjjSk0FTOKCXd7" />
         <input type="hidden" name="customer" value="{data?.customerId}" />
         <button
           class="bg-green-500 text-stone-50 px-4 py-2 rounded-lg shadow-md cursor-pointer"

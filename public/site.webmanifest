@@ -1,14 +1,14 @@
 {
-  "name": "",
-  "short_name": "",
+  "name": "6buns",
+  "short_name": "6buns",
   "icons": [
     {
-      "src": "/android-chrome-192x192.png",
+      "src": "https://firebasestorage.googleapis.com/v0/b/vide-336112.appspot.com/o/site_assets%2Fandroid-chrome-192x192.png?alt=media&token=bba82078-be44-4c6b-993b-892ec673f139",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/android-chrome-512x512.png",
+      "src": "https://firebasestorage.googleapis.com/v0/b/vide-336112.appspot.com/o/site_assets%2Fandroid-chrome-512x512.png?alt=media&token=b31c1fb8-fd69-4fab-a3c7-0dd41d4feb45",
       "sizes": "512x512",
       "type": "image/png"
     }

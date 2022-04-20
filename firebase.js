@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, connectAuthEmulator } from "firebase/auth";
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: "AIzaSyB-FqYcQw3aZl7fvs139nHZZe1HEVHhhQs",
@@ -17,6 +18,9 @@ export const auth = getAuth();
 export const googleProvider = new GoogleAuthProvider();
 
 export const db = getFirestore(app);
+
+export const storage = getStorage(app)
+
 if (!isProduction) {
   connectFirestoreEmulator(db, 'localhost', 8080);
   connectAuthEmulator(auth, "http://localhost:9099");

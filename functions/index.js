@@ -4,7 +4,7 @@ const admin = require("firebase-admin");
 const crypto = require("crypto");
 admin.initializeApp(functions.config().firebase);
 
-const stripe = require("stripe")(functions.config().stripe.testkey);
+const stripe = require("stripe")(functions.config().stripe.secretkey);
 const firestore = admin.firestore();
 const YOUR_DOMAIN = "https://6buns.com";
 // const YOUR_DOMAIN = "http://localhost:5000";

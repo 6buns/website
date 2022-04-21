@@ -50,16 +50,35 @@
   .selected {
     @apply font-bold border border-green-500;
   }
+}
 
-  span.string.token {
-    @apply text-green-400
-  }
+.string,
+.interpolation,
+.attr-name {
+  @apply text-blue-300;
+}
 
-  span.comment.token {
-    @apply text-pink-400
-  }
+.function,
+.class-name {
+  @apply text-yellow-300/80;
+}
 
-  span.token.keyword {
-    @apply text-blue-400
-  }
+.tag,
+.doctype-tag,
+.keyword,
+.boolean {
+  @apply text-blue-500;
+}
+
+.variable,
+.comment {
+  @apply text-pink-300/80;
+}
+
+.punctuation {
+  @apply text-green-300/30;
+}
+
+* {
+  outline: none;
 }

@@ -1,4 +1,4 @@
-# Omegle Clone
+# Basic Video Chat App
 
 Create a html file and fill it with below lines of code. That should get you started.
 
@@ -9,7 +9,7 @@ Create a html file and fill it with below lines of code. That should get you sta
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Omegle Clone</title>
+    <title>Basic Video Chat App</title>
   </head>
   <body>
 
@@ -145,7 +145,7 @@ bun.on('error', (e) => console.error(e))
 
 Handle button clicks and invoke methods.
 - **bun.screenShare()**
-- **bun.toggleMedia("video")** or **bun.toggleMedia("video")** : Can be used to toggle camera or mic,
+- **bun.toggleMedia("video")** or **bun.toggleMedia("audio")** : Can be used to toggle camera or mic,
 > bun.toggle() switches off the camera, if its on, and switches on the camera if its off
 ```js
 const handleClick = (e) => {

@@ -59,9 +59,9 @@ import OmegleClone from "../../Docs/Scalable_Peer/omegleClone.svx";
             <ul class="space-y-6 lg:space-y-2 border-l border-stone-100">
               <li>
                 <Link
-                  to="omegleClone"
+                  to="basicVideoChatApp"
                   class="block border-l pl-4 -ml-px border-transparent hover:border-stone-400 text-stone-700 hover:text-stone-900"
-                  >Omegle Clone</Link>
+                  >Basic Video Chat App</Link>
               </li>
               <!-- <li>
                 <Link
@@ -88,7 +88,7 @@ import OmegleClone from "../../Docs/Scalable_Peer/omegleClone.svx";
           <Route path="/setup" component="{Setup}" />
           <Route path="/events" component="{Events}" />
           <Route path="/methods" component="{Methods}" />
-          <Route path="/omegleClone" component="{OmegleClone}" />
+          <Route path="/basicVideoChatApp" component="{OmegleClone}" />
         </div>
       </div>
     </main>

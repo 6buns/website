@@ -301,9 +301,9 @@ onDestroy(() => {
               </div>
             </div>
             <div
-              class="w-full md:w-11/12 flex md:flex-row flex-col p-4 m-auto space-y-4 md:space-y-0 md:space-x-2">
+              class="w-full md:w-11/12 flex md:flex-row flex-col p-4 m-auto space-y-4 md:space-y-0 md:space-x-4">
               <div
-                class="w-1/2 space-y-1 py-4 bg-stone-50 text-stone-800 rounded-2xl shadow">
+                class="md:w-1/2 space-y-1 py-4 bg-stone-50 text-stone-800 rounded-2xl shadow">
                 <div class="w-full px-4 md:px-8 py-1 flex flex-col space-y-2">
                   <div
                     class="flex flex-row items-stretch justify-between content-between">
@@ -360,7 +360,7 @@ onDestroy(() => {
                 </div>
               </div>
               <div
-                class="w-1/2 py-4 flex flex-col space-y-1 bg-stone-50 text-stone-800 rounded-2xl shadow">
+                class="md:w-1/2 py-4 flex flex-col space-y-1 bg-stone-50 text-stone-800 rounded-2xl shadow">
                 <div
                   class="w-full px-4 md:px-8 py-1 flex flex-row items-stretch justify-between content-between">
                   <span class="text-stone-500 text-base font-mono uppercase"

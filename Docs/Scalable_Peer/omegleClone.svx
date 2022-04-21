@@ -1,0 +1,208 @@
+# Omegle Clone
+
+Create a html file and fill it with below lines of code. That should get you started.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Omegle Clone</title>
+  </head>
+  <body>
+
+  </body>
+</html>
+```
+
+Add Tailwind CSS, for styling, 6buns client package, and index script to handle 6buns events and methods.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Added Tailwind for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Added 6buns-client package -->
+    <script src="https://unpkg.com/6buns-client"></script>
+
+    <title>Omegle Clone</title>
+  </head>
+  <body>
+
+  </body>
+  <script src="index.js"></script>
+</html>
+```
+
+Update the body,
+```html
+<body class="w-[100vw] h-[100vh] flex flex-col items-center justify-evenly bg-stone-200">
+    <div class="absolute top-4">
+      <h1 class="text-8xl font-bold uppercase text-green-50">Scalable Peer</h1>
+    </div>
+    <main class="flex-grow flex flex-wrap items-center justify-center content-center">
+      <div class="relative w-80 h-48 bg-white overflow-hidden rounded-2xl shadow-lg m-4 group cursor-pointer">
+        <video
+          class="self absolute h-full w-full object-cover"
+          autoplay
+          controls
+          muted
+        ></video>
+      </div>
+    </main>
+    <div id="buttonRack" class="absolute bottom-8 space-x-4">
+      <button
+        class="py-1 px-2 bg-white hover:bg-gray-100 rounded-lg shadow-lg disabled:opacity-75 disabled:line-through"
+        id="screen"
+        aria-state="0"
+        onclick="handleClick(this)">
+        Share Screen
+      </button>
+      <button
+        class="py-1 px-2 bg-white hover:bg-gray-100 rounded-lg shadow-lg disabled:opacity-75 disabled:line-through"
+        id="audio"
+        aria-state="1"
+        onclick="handleClick(this)">
+        Stop Audio
+      </button>
+      <button
+        class="py-1 px-2 bg-white hover:bg-gray-100 rounded-lg shadow-lg disabled:opacity-75 disabled:line-through"
+        id="video"
+        aria-state="1"
+        onclick="handleClick(this)">
+        Stop Video
+      </button>
+    </div>
+  </body>
+```
+
+Now comes the main part, creating and handling webrtc connections using 6buns client package.
+Open the index.js file we created.
+
+Create a bun object, this bun object will be used to handle all the events and invoke the methods required.
+There are two input values in this step,
+- **secret** : This is the secret key you create for using in the frontend part of your application. You can generate a secret key, using your api key, and
+- **room** : If left empty, a random room id is alloted. all the peers connected using this room id, are connected to each other in a mesh form to one another.
+```js
+const bun = new Bun({ secret: YOUR_SECRET_KEY, room: ROOM_ID });
+```
+
+## Handling events.
+
+Whenever a new user joins the room, **new-peer** event is fired.
+```js
+bun.on("new-peer", (event) => {
+  console.log("New Peer", event);
+
+  // Create a video element for this peer, and add to page.
+  let vid = document.createElement("video");
+  vid.setAttribute(
+      "class",
+      "remote w-80 h-48 bg-white rounded-2xl shadow-lg m-4"
+  );
+  vid.setAttribute("id", `remote-video-${n.to.name}`);
+  vid.controls = true;
+  vid.autoplay = true;
+  vid.muted = true;
+  vid.poster = n.poster;
+  document.querySelector("main").append(vid);
+});
+```
+
+**new-remote-track** is fired when any other user switches on their camera, and media track is available.
+Below we attach the media track to the video element.
+```js
+bun.on("new-remote-track", (event) => {
+  // Find the video element for this peer.
+  let vid = document.querySelector(`#remote-video-${event.target.to.name}`);
+
+  // Add track src to video
+  try {
+      vid.srcObject = event.streams[0];
+  } catch (error) {
+      vid.src = URL.createObjectURL(event.streams[0]);
+  }
+});
+```
+
+Handle when user leaves the room, **peer-left** is fired, with peer_id as the parameter.
+```js
+bun.on("peer-left", (peer_id) => document.querySelector(`#remote-video-${peer_id}`).remove());
+```
+
+Handling errors if there are any.
+```js
+bun.on('error', (e) => console.error(e))
+```
+
+Handle button clicks and invoke methods.
+- **bun.screenShare()**
+- **bun.toggleMedia("video")** or **bun.toggleMedia("video")** : Can be used to toggle camera or mic,
+> bun.toggle() switches off the camera, if its on, and switches on the camera if its off
+```js
+const handleClick = (e) => {
+	switch (e.id) {
+		case "screen":
+			console.log("switching to screen");
+			bun.screenShare();
+			document.getElementById("screen").disabled = true;
+			break;
+		case "video": {
+			const state =
+				document.getElementById("video").getAttribute("aria-state") ===
+					"1"
+					? true
+					: false;
+			if (state) {
+				console.log("stop video");
+				bun.toggleMedia("video");
+				document.getElementById("video").innerHTML = "Start Video";
+				document.getElementById("video").setAttribute("aria-state", "0");
+				break;
+			} else {
+				console.log("start video");
+				bun.toggleMedia("video");
+				document.getElementById("video").innerHTML = "Stop Video";
+				document.getElementById("video").setAttribute("aria-state", "1");
+				break;
+			}
+		}
+		case "audio": {
+			const state =
+				document.getElementById("audio").getAttribute("aria-state") ===
+					"1"
+					? true
+					: false;
+			if (state) {
+				console.log("stop Audio");
+				bun.toggleMedia("audio");
+				document.getElementById("audio").innerHTML = "Start Audio";
+				document.getElementById("audio").setAttribute("aria-state", "0");
+				break;
+			} else {
+				console.log("start Audio");
+				bun.toggleMedia("audio");
+				document.getElementById("audio").innerHTML = "Stop Audio";
+				document.getElementById("audio").setAttribute("aria-state", "1");
+				break;
+			}
+		}
+	}
+};
+```
+
+Enable button when screenShare has ended,
+```js
+bun.on("screen-share-ended", (e) => document.getElementById("screen").disabled = false);
+```
+
+That's it you have successfully, added 6buns Scalable Peer to your site.
+Here is the [Github Repo](https://github.com/6buns/omegleClone)

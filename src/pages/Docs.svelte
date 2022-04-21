@@ -5,6 +5,7 @@ import GettingStarted from "../../Docs/Scalable_Peer/GettingStarted.svx";
 import Setup from "../../Docs/Scalable_Peer/Setup.svx";
 import Events from "../../Docs/Scalable_Peer/Events.svx";
 import Methods from "../../Docs/Scalable_Peer/Methods.svx";
+import OmegleClone from "../../Docs/Scalable_Peer/omegleClone.svx";
 </script>
 
 <Router>
@@ -62,7 +63,7 @@ import Methods from "../../Docs/Scalable_Peer/Methods.svx";
                   class="block border-l pl-4 -ml-px border-transparent hover:border-stone-400 text-stone-700 hover:text-stone-900"
                   >Omegle Clone</Link>
               </li>
-              <li>
+              <!-- <li>
                 <Link
                   to="clubhouseClone"
                   class="block border-l pl-4 -ml-px border-transparent hover:border-stone-400 text-stone-700 hover:text-stone-900"
@@ -73,7 +74,7 @@ import Methods from "../../Docs/Scalable_Peer/Methods.svx";
                   to="chessGame"
                   class="block border-l pl-4 -ml-px border-transparent hover:border-stone-400 text-stone-700 hover:text-stone-900"
                   >Chess Game with video</Link>
-              </li>
+              </li> -->
             </ul>
           </li>
         </ul>
@@ -87,6 +88,7 @@ import Methods from "../../Docs/Scalable_Peer/Methods.svx";
           <Route path="/setup" component="{Setup}" />
           <Route path="/events" component="{Events}" />
           <Route path="/methods" component="{Methods}" />
+          <Route path="/omegleClone" component="{OmegleClone}" />
         </div>
       </div>
     </main>

@@ -5,7 +5,7 @@ import { initAuth } from "../auth";
 const { state, send } = initAuth;
 console.log(state);
 
-let loginForm = writable(true);
+let loginForm = writable(false);
 
 export const setLoginForm = () => {
   loginForm.update((n) => (n = !n));

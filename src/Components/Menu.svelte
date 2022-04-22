@@ -1,5 +1,6 @@
 <script>
 import { initAuth } from "../auth";
+import { setLoginForm } from "./Login.svelte";
 let open = false;
 const setOpen = () => (open = !open);
 
@@ -32,9 +33,7 @@ const { state, send } = initAuth;
       {#if $state.matches("signedOut")}
         <ul
           class="flex flex-row items-center justify-evenly space-x-6 capitalize cursor-pointer">
-          <li class="btn btn-outlined" on:click="{() => send('LOGIN')}">
-            login
-          </li>
+          <li class="btn btn-outlined" on:click="{setLoginForm}">login</li>
           <!-- <li class="btn btn-green">Signup</li> -->
         </ul>
       {:else}
@@ -81,9 +80,7 @@ const { state, send } = initAuth;
       {#if $state.matches("signedOut")}
         <ul
           class="mt-8 w-full p-4 flex flex-row items-center justify-evenly space-x-8">
-          <li class="btn btn-outlined" on:click="{() => send('LOGIN')}">
-            Login
-          </li>
+          <li class="btn btn-outlined" on:click="{setLoginForm}">Login</li>
           <!-- <li class="btn btn-green">Signup</li> -->
         </ul>
       {:else}

@@ -23,6 +23,7 @@ import Medical from "../Components/home/displays/Medical.svelte";
 import Service from "../Components/home/displays/Service.svelte";
 import { onDestroy } from "svelte";
 import PeerConnectionAnimation from "../Components/PeerConnectionAnimation.svelte";
+import { setLoginForm } from "../Components/Login.svelte";
 let current = { key: "games", component: Games },
   currentArray = [
     { key: "games", component: Games },
@@ -102,13 +103,14 @@ onDestroy(() => {
           With just few lines of code, your webrtc connection is up and running.
         </p>
         <div
+          on:click="{setLoginForm}"
           class="row-span-1 mt-8 flex lg:flex-row flex-col space-y-4 lg:space-y-0 justify-start">
           <div class="rounded-md shadow">
-            <a
+            <button
               href="/"
               class="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 md:py-4 md:text-lg md:px-10">
               Get started
-            </a>
+            </button>
           </div>
           <div class="sm:mt-0 sm:ml-3">
             <a
@@ -395,13 +397,13 @@ onDestroy(() => {
         </div>
       </div>
       <div
+        on:click="{setLoginForm}"
         class="row-span-1 my-8 flex flex-col sm:flex-row justify-start items-center space-y-4 sm:space-y-0 sm:space-x-4">
         <div class="rounded-md shadow">
-          <a
-            href="/"
+          <button
             class="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 md:py-4 md:text-lg md:px-10">
             Get started
-          </a>
+          </button>
         </div>
         <div class="rounded-md shadow">
           <a

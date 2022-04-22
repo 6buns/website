@@ -1,12 +1,13 @@
 import {
     onAuthStateChanged,
     signInWithPopup,
+    sendSignInLinkToEmail,
     signOut
 } from "firebase/auth";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { useMachine } from './useMachine';
 import { initAuthMachine } from './authMachine';
-import { auth, googleProvider, db } from '../../firebase';
+import { auth, googleProvider, db, githubProvider } from '../../firebase';
 
 const userMapper = claims => ({
     id: claims.user_id,
@@ -16,9 +17,14 @@ const userMapper = claims => ({
     picture: claims.picture
 });
 
-const loginWithGoogle = () => {
-    return signInWithPopup(auth, googleProvider);
-};
+const loginWithGoogle = () => signInWithPopup(auth, googleProvider)
+
+const loginWithMagicLink = (email) => sendSignInLinkToEmail(auth, email, {
+    url: 'https://6buns.com',
+    dynamicLinkDomain: '6buns.com'
+})
+
+const loginWithGithub = () => signInWithPopup(auth, githubProvider)
 
 // define XState services
 const services = {
@@ -32,7 +38,16 @@ const services = {
             }, (error) => reject(error));
         }),
     authenticator: (_, event) => {
-        return loginWithGoogle();
+        switch (event.provider) {
+            case 'email':
+                return loginWithMagicLink(event.email);
+            case 'github':
+                return loginWithGithub();
+            case 'google':
+                return loginWithGoogle();
+            default:
+                break;
+        }
     },
     loader: (ctx, _) => {
         return new Promise((resolve, reject) => {

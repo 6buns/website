@@ -9,14 +9,11 @@ const { state, send } = initAuth;
 
 <nav class="w-full py-2 px-8 md:px-16">
   <div class="flex flex-row items-center justify-between md:justify-start">
-    <a
-      href="/"
-      class="flex-grow-0 flex flex-row items-center justify-center space-x-4 py-2">
+    <a href="/" class="flex-grow-0 flex flex-row items-center justify-center space-x-4 py-2">
       <img src="/favicon-32x32.png" class="w-8 h-8" alt="site icon" />
       <span class="text-3xl font-semibold font-serif">6buns</span>
     </a>
-    <div
-      class="md:w-full md:flex flex-row flex-grow justify-end items-center space-x-4 hidden text-md font-semibold">
+    <div class="md:w-full md:flex flex-row flex-grow justify-end items-center space-x-4 hidden text-md font-semibold">
       <ul class=" flex flex-row items-center justify-evenly capitalize">
         {#if $state.matches("signedIn")}
           <li class="btn btn-plain">
@@ -31,26 +28,18 @@ const { state, send } = initAuth;
         </li>
       </ul>
       {#if $state.matches("signedOut")}
-        <ul
-          class="flex flex-row items-center justify-evenly space-x-6 capitalize cursor-pointer">
+        <ul class="flex flex-row items-center justify-evenly space-x-6 capitalize cursor-pointer">
           <li class="btn btn-outlined" on:click="{setLoginForm}">login</li>
           <!-- <li class="btn btn-green">Signup</li> -->
         </ul>
       {:else}
-        <ul
-          class=" flex flex-row items-center justify-evenly space-x-6 capitalize cursor-pointer">
-          <li class="btn btn-outlined" on:click="{() => send('LOGOUT')}">
-            Logout
-          </li>
+        <ul class=" flex flex-row items-center justify-evenly space-x-6 capitalize cursor-pointer">
+          <li class="btn btn-outlined" on:click="{() => send('LOGOUT')}">Logout</li>
         </ul>
       {/if}
     </div>
     <div class="text-stone-500 md:hidden z-30" on:click="{setOpen}">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        class="h-8 w-8"
-        viewBox="0 0 20 20"
-        fill="currentColor">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor">
         <path
           fillRule="evenodd"
           d="{!open
@@ -61,10 +50,8 @@ const { state, send } = initAuth;
     </div>
   </div>
   {#if open}
-    <div
-      class="text-2xl text-stone-200 z-20 p-4 flex flex-col items-center justify-evenly">
-      <ul
-        class="w-full p-4 flex flex-col items-center justify-evenly space-y-4">
+    <div class="text-2xl text-stone-200 z-20 p-4 flex flex-col items-center justify-evenly">
+      <ul class="w-full p-4 flex flex-col items-center justify-evenly space-y-4">
         {#if $state.matches("signedIn")}
           <li class="btn btn-plain">
             <a href="/dashboard"> Dashboard </a>
@@ -78,17 +65,13 @@ const { state, send } = initAuth;
         </li>
       </ul>
       {#if $state.matches("signedOut")}
-        <ul
-          class="mt-8 w-full p-4 flex flex-row items-center justify-evenly space-x-8">
+        <ul class="mt-8 w-full p-4 flex flex-row items-center justify-evenly space-x-8">
           <li class="btn btn-outlined" on:click="{setLoginForm}">Login</li>
           <!-- <li class="btn btn-green">Signup</li> -->
         </ul>
       {:else}
-        <ul
-          class="mt-8 w-full p-4 flex flex-row items-center justify-evenly space-x-8">
-          <li class="btn btn-outlined" on:click="{() => send('LOGOUT')}">
-            Logout
-          </li>
+        <ul class="mt-8 w-full p-4 flex flex-row items-center justify-evenly space-x-8">
+          <li class="btn btn-outlined" on:click="{() => send('LOGOUT')}">Logout</li>
         </ul>
       {/if}
     </div>

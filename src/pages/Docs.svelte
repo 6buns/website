@@ -11,45 +11,30 @@ import OmegleClone from "../../Docs/Scalable_Peer/omegleClone.svx";
 <Router>
   <Menu />
   <div class="w-full h-auto mx-auto px-8 md:px-16">
-    <div
-      class="hidden lg:block lg:fixed lg:z-20 lg:inset-0 lg:top-16 lg:left-[max(0px,calc(50%-45rem))] lg:right-auto lg:w-[19.5rem] pb-8 px-8 md:px-16 overflow-y-auto">
+    <div class="hidden lg:block lg:fixed lg:z-20 lg:inset-0 lg:top-16 lg:left-[max(0px,calc(50%-45rem))] lg:right-auto lg:w-[19.5rem] pb-8 px-8 md:px-16 overflow-y-auto">
       <nav class="lg:text-sm lg:leading-6 relative">
         <ul>
           <li class="mt-12 lg:mt-8">
-            <h5 class="mb-8 lg:mb-3 font-semibold text-stone-900">
-              Getting Started
-            </h5>
+            <h5 class="mb-8 lg:mb-3 font-semibold text-stone-900">Getting Started</h5>
             <ul class="space-y-6 lg:space-y-2 border-l border-stone-100">
               <Link to="/docs#installation">
                 <li>
-                  <a
-                    href="#installation"
-                    class="block border-l pl-4 -ml-px border-transparent hover:border-stone-400 text-stone-700 hover:text-stone-900"
-                    >Installation</a>
+                  <a href="#installation" class="block border-l pl-4 -ml-px border-transparent hover:border-stone-400 text-stone-700 hover:text-stone-900">Installation</a>
                 </li>
               </Link>
               <Link to="setup">
                 <li>
-                  <a
-                    href="#setup"
-                    class="block border-l pl-4 -ml-px border-transparent hover:border-stone-400 text-stone-700 hover:text-stone-900"
-                    >Setup</a>
+                  <a href="#setup" class="block border-l pl-4 -ml-px border-transparent hover:border-stone-400 text-stone-700 hover:text-stone-900">Setup</a>
                 </li>
               </Link>
               <Link to="events">
                 <li>
-                  <div
-                    class="block border-l pl-4 -ml-px border-transparent hover:border-stone-400 text-stone-700 hover:text-stone-900">
-                    Events
-                  </div>
+                  <div class="block border-l pl-4 -ml-px border-transparent hover:border-stone-400 text-stone-700 hover:text-stone-900">Events</div>
                 </li>
               </Link>
               <Link to="methods">
                 <li>
-                  <a
-                    href="#setup"
-                    class="block border-l pl-4 -ml-px border-transparent hover:border-stone-400 text-stone-700 hover:text-stone-900"
-                    >Methods</a>
+                  <a href="#setup" class="block border-l pl-4 -ml-px border-transparent hover:border-stone-400 text-stone-700 hover:text-stone-900">Methods</a>
                 </li>
               </Link>
             </ul>
@@ -58,10 +43,7 @@ import OmegleClone from "../../Docs/Scalable_Peer/omegleClone.svx";
             <h5 class="mb-8 lg:mb-3 font-semibold text-stone-900">Guides</h5>
             <ul class="space-y-6 lg:space-y-2 border-l border-stone-100">
               <li>
-                <Link
-                  to="basicVideoChatApp"
-                  class="block border-l pl-4 -ml-px border-transparent hover:border-stone-400 text-stone-700 hover:text-stone-900"
-                  >Basic Video Chat App</Link>
+                <Link to="basicVideoChatApp" class="block border-l pl-4 -ml-px border-transparent hover:border-stone-400 text-stone-700 hover:text-stone-900">Basic Video Chat App</Link>
               </li>
               <!-- <li>
                 <Link
@@ -81,8 +63,7 @@ import OmegleClone from "../../Docs/Scalable_Peer/omegleClone.svx";
       </nav>
     </div>
     <main class="lg:pl-[19.5rem]">
-      <div
-        class="max-w-3xl mx-auto pt-10 xl:max-w-none xl:ml-0 xl:mr-[15.5rem] xl:pr-16">
+      <div class="max-w-3xl mx-auto pt-10 xl:max-w-none xl:ml-0 xl:mr-[15.5rem] xl:pr-16">
         <div class="relative z-20 pb-10 prose prose-stone dark:prose-dark">
           <Route path="/" component="{GettingStarted}" />
           <Route path="/setup" component="{Setup}" />

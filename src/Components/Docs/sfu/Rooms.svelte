@@ -3,21 +3,14 @@
 
 <div class="relative z-20 pt-4 prose prose-stone dark:prose-dark">
   <p>A room is a collection of users interacting with each other.</p>
-  <p>
-    No Charge is levied on creation or updating rooms. Realtime data regarding
-    rooms are charged and an additional $0.002 is added to the unit cost.
-  </p>
+  <p>No Charge is levied on creation or updating rooms. Realtime data regarding rooms are charged and an additional $0.002 is added to the unit cost.</p>
   <p>Pricing Example :</p>
-  <p>
-    A room of 4 users, wherein all 4 of them have camera on, therefore, total
-    number of consumers is 24,
-  </p>
+  <p>A room of 4 users, wherein all 4 of them have camera on, therefore, total number of consumers is 24,</p>
   <!-- <img
     src="/roomsCalculation.png"
     alt="24 * 20 * 0.005 = $2.4 (basic realtime stats)" /> -->
 
-    <p
-      class="math">{`$$24 * 20 * 0.005 = $2.4 \\textit{ (basic realtime stats)}$$`}</p>
+  <p class="math">{`$$24 * 20 * 0.005 = $2.4 \\textit{ (basic realtime stats)}$$`}</p>
   <p>Base Realtime Included which are free,</p>
   <ul>
     <li>Consumer Count</li>

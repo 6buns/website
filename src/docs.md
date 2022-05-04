@@ -1,17 +1,18 @@
 # Terms
 
-##  Consumer
+## Consumer
 
 Consumer is the media stream of other users in the room, being received by the user. Total consumer count is the sum of all the consumers handled during the room session.
 
 $$
 \text{Consumer Calculation Formula} = (N * M * 2)
 $$
+
 where,
 
 - **N** is number of users in the room,
-- **M** is number of users producing media *(with their camera on, and not mute*),
-- **2** is the streams count that is being sent to media server (*one for video, and another for audio*),
+- **M** is number of users producing media _(with their camera on, and not mute_),
+- **2** is the streams count that is being sent to media server (_one for video, and another for audio_),
 
 ```sequence
 Title: Each user sends 1 video, and recieves 2 other video.
@@ -32,9 +33,10 @@ In the above room scenario, media stream from A's camera is being sent to our me
 
 ### Pricing Example 1
 
-Cost Calculation Formula = **(Consumers * Minutes) * Unit Cost**,
+Cost Calculation Formula = **(Consumers _ Minutes) _ Unit Cost**,
 
 where, unit cost is **$0.005 per consumer-min**
+
 $$
 (6 * 60) * $0.005 = $1.8
 $$
@@ -44,15 +46,19 @@ In a room of 3 users, and a duration of 60 minutes, where each user is able to s
 ### Pricing Example 2
 
 If you join a room of 100 users, and 6 of them have their camera on :
+
 $$
 \text{(users in a room) * (users with camera/min on) * (1 for audio, 2 for video)}
 $$
+
 then the number of consumers handled by the room is
+
 $$
 100 * 6 * 2 = 1200
 $$
 
 If the room is alive for 10 minutes, then the usage charge incurred is,
+
 $$
 1200 * 10 * 0.005 = $60 \textit{ (basic realtime stats)}
 \newline 1200 * 10 * 0.0052 = $62.4 \textit{ (advanced realtime stats)}
@@ -67,10 +73,12 @@ No Charge is levied on creation or updating rooms. Realtime data regarding rooms
 Pricing Example :
 
 A room of 4 users, wherein all 4 of them have camera on, therefore, total number of consumers is 24,
+
 $$
 24 * 20 * 0.005 = $2.4 \textit{ (basic realtime stats)}
 \newline 24 * 20 * (0.005 + 0.0002) = $2.496 \sim $2.5 \textit{ (advanced realtime stats)}
 $$
+
 where $0.001 is the additional charge for realtime data related to room. This is useful for gaining insights regarding room interaction.
 
 Base Realtime Included which are free,
@@ -79,7 +87,8 @@ Base Realtime Included which are free,
 - Producer Count
 
 ### Realtime Data
-*(for which charge is applied)*
+
+_(for which charge is applied)_
 
 - #### Participant's Data
 
@@ -111,6 +120,8 @@ Base Realtime Included which are free,
         },
         "type": "pipe-transport"
       }
+
+    ```
 
   - ##### WebRTC Transport Data
 
@@ -206,7 +217,7 @@ Base Realtime Included which are free,
 
 Active Speaker is the most dominant speaker among users. In a room of 10 users, where each user has his camera on, it may get confusing, when each of them, is speaking. Therefore, in order to keep a room communication proper, one has to figure out users who are passive speakers, and mute them. Or, you could highlight the active speaker, with a border, so that users know a user is speaking.
 
-It is advised to keep producers (users with camera/mic on) count below 6,  cause if it increases, then each user would have download 6 video streams which would require huge bandwidth, and end users could have performance lag.
+It is advised to keep producers (users with camera/mic on) count below 6, cause if it increases, then each user would have download 6 video streams which would require huge bandwidth, and end users could have performance lag.
 
 You could pause producers, when,
 

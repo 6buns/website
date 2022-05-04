@@ -23,6 +23,7 @@ let Room = writable("");
 let peers = writable(0);
 let key;
 let keyCode;
+let statsInterval;
 
 let self = writable({
     video: true,
@@ -58,7 +59,7 @@ const connect = () => {
   $bun.on("room-joined", ({ res, room }) => {
     Room.set(room);
     peers.set(res.length);
-    console.log(bun);
+    console.log($bun);
     document.querySelector(".self-parent").onfullscreenchange = (e) => {
       if (document.fullscreenElement) {
         self.set({ ...$self, expanded: true });
@@ -70,6 +71,11 @@ const connect = () => {
 
   $bun.on("new-peer", (e) => {
     console.log("NEW PEER");
+    statsInterval = setInterval(() => {
+      for (const [id, peer] in $bun.peers) {
+        peer.getStats().then(console.log);
+      }
+    }, 5000);
   });
 
   $bun.on("screen-share-ended", (e) => {
@@ -87,10 +93,7 @@ const connect = () => {
 
   $bun.on("peer-data-recieved", (data) => {
     const hTag = document.createElement("h1");
-    hTag.setAttribute(
-      "class",
-      "w-max px-4 py-2 mx-4 bg-green-200 rounded-2xl shadow self-start"
-    );
+    hTag.setAttribute("class", "w-max px-4 py-2 mx-4 bg-green-200 rounded-2xl shadow self-start");
     hTag.innerText = data;
     document.querySelector(".messages").append(hTag);
   });
@@ -109,10 +112,7 @@ const sendMessage = () => {
   if (data === "" || !data) return;
   $bun.sendData(data);
   const hTag = document.createElement("h1");
-  hTag.setAttribute(
-    "class",
-    "w-max px-4 py-2 mx-4 bg-white rounded-2xl shadow self-end"
-  );
+  hTag.setAttribute("class", "w-max px-4 py-2 mx-4 bg-white rounded-2xl shadow self-end");
   hTag.innerText = data;
   document.querySelector(".messages").append(hTag);
   document.querySelector("#chatMessage").value = "";
@@ -171,6 +171,7 @@ const handleClick = (e) => {
 
 onDestroy(async () => {
   await $bun.close();
+  clearInterval(statsInterval);
 });
 
 const handleKeydown = (e) => {
@@ -196,40 +197,15 @@ const handleKeydown = (e) => {
   {#if $setRoom}
     <div class="w-full h-full flex flex-row space-x-2 py-2 px-8 md:px-16">
       <div class="flex-grow-0 flex flex-col space-y-2">
-        <div
-          class="self-parent w-72 h-64 relative overflow-hidden rounded-md border border-stone-300">
-          <video
-            class="self absolute h-full w-full object-cover"
-            autoplay
-            muted>
-          </video>
-          <div
-            on:click="{handleClick}"
-            id="expand"
-            class="absolute top-4 right-4 cursor-pointer w-12 h-12 rounded-full bg-white/40 opacity-40 hover:opacity-100 hover:bg-white flex items-center justify-center">
+        <div class="self-parent w-72 h-64 relative overflow-hidden rounded-md border border-stone-300">
+          <video class="self absolute h-full w-full object-cover" autoplay muted> </video>
+          <div on:click="{handleClick}" id="expand" class="absolute top-4 right-4 cursor-pointer w-12 h-12 rounded-full bg-white/40 opacity-40 hover:opacity-100 hover:bg-white flex items-center justify-center">
             {#if $self.expanded}
-              <svg
-                id="expand"
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="2">
-                <path
-                  id="expand"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
-                ></path>
+              <svg id="expand" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path id="expand" stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
               </svg>
             {:else}
-              <svg
-                id="expand"
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-5 w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor">
+              <svg id="expand" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path
                   id="expand"
                   fill-rule="evenodd"
@@ -238,69 +214,25 @@ const handleKeydown = (e) => {
               </svg>
             {/if}
           </div>
-          <div
-            class="absolute bottom-4 left-0 right-0 flex flex-row items-center justify-evenly mx-2 space-x-2">
-            <div
-              id="video"
-              on:click="{handleClick}"
-              class="cursor-pointer w-12 h-12 rounded-full bg-white/40 opacity-40 hover:opacity-100 hover:bg-white flex items-center justify-center">
+          <div class="absolute bottom-4 left-0 right-0 flex flex-row items-center justify-evenly mx-2 space-x-2">
+            <div id="video" on:click="{handleClick}" class="cursor-pointer w-12 h-12 rounded-full bg-white/40 opacity-40 hover:opacity-100 hover:bg-white flex items-center justify-center">
               {#if $self.video}
-                <svg
-                  id="video"
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  stroke-width="2">
-                  <path
-                    id="video"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                  ></path>
+                <svg id="video" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path id="video" stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                 </svg>
               {:else}
-                <svg
-                  id="video"
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-5 w-5"
-                  viewBox="0 0 20 20"
-                  fill="currentColor">
-                  <path
-                    id="video"
-                    d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z"
-                  ></path>
+                <svg id="video" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path id="video" d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z"></path>
                 </svg>
               {/if}
             </div>
-            <div
-              id="screen"
-              on:click="{handleClick}"
-              class="cursor-pointer w-12 h-12 rounded-full bg-white/40 opacity-40 hover:opacity-100 hover:bg-white flex items-center justify-center">
+            <div id="screen" on:click="{handleClick}" class="cursor-pointer w-12 h-12 rounded-full bg-white/40 opacity-40 hover:opacity-100 hover:bg-white flex items-center justify-center">
               {#if $self.screen}
-                <svg
-                  id="screen"
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  stroke-width="2">
-                  <path
-                    id="screen"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                  ></path>
+                <svg id="screen" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path id="screen" stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                 </svg>
               {:else}
-                <svg
-                  id="screen"
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-5 w-5"
-                  viewBox="0 0 20 20"
-                  fill="currentColor">
+                <svg id="screen" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path
                     id="screen"
                     fill-rule="evenodd"
@@ -309,33 +241,13 @@ const handleKeydown = (e) => {
                 </svg>
               {/if}
             </div>
-            <div
-              id="audio"
-              on:click="{handleClick}"
-              class="cursor-pointer w-12 h-12 rounded-full bg-white/40 opacity-40 hover:opacity-100 hover:bg-white flex items-center justify-center">
+            <div id="audio" on:click="{handleClick}" class="cursor-pointer w-12 h-12 rounded-full bg-white/40 opacity-40 hover:opacity-100 hover:bg-white flex items-center justify-center">
               {#if $self.audio}
-                <svg
-                  id="audio"
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  stroke-width="2">
-                  <path
-                    id="audio"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-                  ></path>
+                <svg id="audio" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path id="audio" stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
                 </svg>
               {:else}
-                <svg
-                  id="audio"
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-5 w-5"
-                  viewBox="0 0 20 20"
-                  fill="currentColor">
+                <svg id="audio" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path
                     id="audio"
                     fill-rule="evenodd"
@@ -346,24 +258,17 @@ const handleKeydown = (e) => {
             </div>
           </div>
         </div>
-        <div
-          class="w-72 h-64 relative overflow-hidden rounded-md border border-stone-300">
-          <video
-            class="peer absolute h-full w-full object-cover"
-            autoplay
-            muted>
-          </video>
+        <div class="w-72 h-64 relative overflow-hidden rounded-md border border-stone-300">
+          <video class="peer absolute h-full w-full object-cover" autoplay muted> </video>
         </div>
       </div>
       <div class="w-[36rem] flex-grow flex flex-col justify-evenly space-y-2">
         <div class="bg-stone-200 p-2 rounded-md">
           <h1 class="text-center font-[100] text-stone-500">
-            Press <kbd>Enter</kbd> to send a message, and <kbd>Escape</kbd> to reset
-            and join a random room.
+            Press <kbd>Enter</kbd> to send a message, and <kbd>Escape</kbd> to reset and join a random room.
           </h1>
         </div>
-        <div
-          class=" flex-grow flex flex-col-reverse py-2 overflow-y-scroll rounded-md bg-stone-200">
+        <div class=" flex-grow flex flex-col-reverse py-2 overflow-y-scroll rounded-md bg-stone-200">
           <span class="flex-[1_1_0%]"></span>
           <div class="messages flex flex-col space-y-2"></div>
         </div>
@@ -377,23 +282,16 @@ const handleKeydown = (e) => {
               placeholder="type here to send messages..."
               rows="1"
               row
-              class="mr-2 block w-full rounded-md bg-stone-300 border-transparent focus:border-gray-500 focus:bg-white focus:ring-0"
-            ></textarea>
+              class="mr-2 block w-full rounded-md bg-stone-300 border-transparent focus:border-gray-500 focus:bg-white focus:ring-0"></textarea>
           </div>
-          <div class="flex-grow-0 btn btn-green" on:click="{sendMessage}">
-            Send
-          </div>
+          <div class="flex-grow-0 btn btn-green" on:click="{sendMessage}">Send</div>
         </div>
       </div>
     </div>
   {:else}
     <dialog id="roomChoice" class=" flex-grow" on:close="{onClose}">
-      <div
-        class="w-full h-full p-4 flex flex-col items-center justify-center bg-white shadow-lg rounded-lg">
-        <form
-          method="dialog"
-          class="flex flex-col justify-center space-y-4"
-          open="true">
+      <div class="w-full h-full p-4 flex flex-col items-center justify-center bg-white shadow-lg rounded-lg">
+        <form method="dialog" class="flex flex-col justify-center space-y-4" open="true">
           <p class="text-lg">
             <select
               on:change="{(e) => {
@@ -407,22 +305,12 @@ const handleKeydown = (e) => {
           </p>
           {#if $showRoomInput}
             <label class="block">
-              <input
-                type="text"
-                aria-multiline="false"
-                class="mt-1 block w-full rounded-md bg-gray-100 border-transparent focus:border-gray-500 focus:bg-white focus:ring-0"
-                placeholder="type room name here..."
-                bind:value="{$Room}" />
+              <input type="text" aria-multiline="false" class="mt-1 block w-full rounded-md bg-gray-100 border-transparent focus:border-gray-500 focus:bg-white focus:ring-0" placeholder="type room name here..." bind:value="{$Room}" />
             </label>
           {/if}
           <div class="my-4 flex flex-row content-center justify-evenly">
-            <button
-              class="px-6 py-2 bg-stone-500 text-white shadow-md rounded-md font-bold"
-              value="cancel">Cancel</button>
-            <button
-              class="px-6 py-2 bg-green-500 text-white shadow-md rounded-md font-bold"
-              id="confirmBtn"
-              value="default">Confirm</button>
+            <button class="px-6 py-2 bg-stone-500 text-white shadow-md rounded-md font-bold" value="cancel">Cancel</button>
+            <button class="px-6 py-2 bg-green-500 text-white shadow-md rounded-md font-bold" id="confirmBtn" value="default">Confirm</button>
           </div>
         </form>
       </div>

@@ -11,10 +11,10 @@ import { auth, googleProvider, db, githubProvider } from '../../firebase';
 
 const userMapper = claims => ({
     id: claims.user_id,
-    name: claims.name,
+    displayName: claims.name,
     email: claims.email,
     phone: claims.phone,
-    picture: claims.picture
+    photoURL: claims.photoURL
 });
 
 const loginWithGoogle = () => signInWithPopup(auth, googleProvider)

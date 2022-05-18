@@ -20,7 +20,7 @@ export const githubProvider = new GithubAuthProvider();
 
 export const db = getFirestore(app);
 
-export const storage = getStorage(app)
+export const storage = getStorage(app);
 
 if (!isProduction) {
   connectFirestoreEmulator(db, 'localhost', 8080);

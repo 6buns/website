@@ -6,6 +6,7 @@ admin.initializeApp(functions.config().firebase);
 
 const stripe = require("stripe")(functions.config().stripe.secretkey);
 const firestore = admin.firestore();
+const auth = admin.auth();
 const YOUR_DOMAIN = "https://6buns.com";
 // const YOUR_DOMAIN = "http://localhost:5000";
 
@@ -116,6 +117,36 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
         hasSubcription: false,
         subscrition: {},
       });
+    }
+    case "customer.updated": {
+      const customerRef = firestore.collection("customers");
+
+      const doc = await customerRef.doc(data.id).get();
+      const customer = doc.data();
+      const userData = await auth.getUser(customer.userId);
+      const update = {};
+
+
+      if (data.name && (data.name !== userData.name || !userData.name)) {
+        update["auth"]["displayName"] = data.name;
+      }
+      if (data.email && (data.email !== userData.email || !userData.email)) {
+        update["auth"]["email"] = data.email;
+      }
+      if (data.phone && (data.phone !== userData.phoneNumber || !userData.phoneNumber)) {
+        update["auth"]["phoneNumber"] = data.phone;
+      }
+      if (data.address && (data.address !== userData.metadata.address || !userData.metadata.address)) {
+        update["auth"]["metadata"]["address"] = data.address;
+      }
+      if (data.shipping && (data.shipping !== userData.metadata.shipping || !userData.metadata.shipping)) {
+        update["auth"]["metadata"]["shipping"] = data.shipping;
+      }
+
+      if (Object.keys(update).length > 0) {
+        const updateData = update["auth"];
+        return await auth.updateUser(customer.userId, updateData);
+      } else return;
     }
   }
 });

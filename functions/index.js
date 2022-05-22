@@ -7,8 +7,8 @@ admin.initializeApp(functions.config().firebase);
 const stripe = require("stripe")(functions.config().stripe.secretkey);
 const firestore = admin.firestore();
 const auth = admin.auth();
-const YOUR_DOMAIN = "https://6buns.com";
-// const YOUR_DOMAIN = "http://localhost:5000";
+// const YOUR_DOMAIN = "https://6buns.com";
+const YOUR_DOMAIN = "http://localhost:5000";
 
 
 // // Create and Deploy Your First Cloud Functions
@@ -91,6 +91,7 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
         active: true,
         userId: data.userId,
         apiKey,
+        secretKeyHash: "",
       });
       return await customerRef.doc(customerId).set({
         apiKey,
@@ -191,4 +192,20 @@ exports.createPortalSession = functions.https.onRequest(async (req, res) => {
   }
 
   res.redirect(303, portalSession.url);
+});
+
+exports.generateNewSecret = functions.https.onRequest(async (req, res) => {
+  console.log(typeof req.body);
+  const { apiKey } = JSON.parse(req.body);
+  const keyStoreRef = firestore.collection("keyStore");
+  const apiKeyHash = crypto.createHash("md5").update(apiKey).digest("hex");
+  const secretKey = crypto.randomBytes(99).toString("hex");
+  const secretKeyHash = crypto.createHash("md5").update(secretKey).digest("hex");
+
+
+  await keyStoreRef.doc(apiKeyHash).update({
+    secretKeyHash: secretKeyHash,
+  });
+
+  res.json({ secretKey });
 });

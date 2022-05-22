@@ -8,11 +8,13 @@ import { initAuth } from "../auth";
 import { updateAccountMachine } from "../auth/updateAccountMachine";
 
 const { state, send } = initAuth;
+$: secretKey = writable("");
 
 const service = interpret(updateAccountMachine).onTransition((state) => console.log(state.context));
 
 onMount(() => {
   service.start();
+  secretKey.set(new Array(99).fill("*").join(""));
 });
 
 onDestroy(() => {
@@ -54,12 +56,74 @@ const saveData = () => {
   service.send("NEXT", { uid: data.uid, data: { ...obj } });
   return { ...obj };
 };
+
+const generateSecret = () => {
+  fetch("http://localhost:5001/vide-336112/us-central1/generateNewSecret", {
+    method: "POST",
+    body: JSON.stringify({
+      apiKey: data?.apiKey,
+    }),
+  })
+    .then((res) => res.json())
+    .then((value) => secretKey.set(value.secretKey))
+    .catch(console.error);
+};
 </script>
 
-<div class="w-full h-full bg-white rounded-2xl shadow-md flex flex-col items-center justify-start overflow-scroll px-16 py-8 space-y-8">
-  <div class="w-fit flex flex-col items-start justify-evenly space-y-2">
+<div class="w-full h-full bg-white rounded-2xl shadow-md flex flex-col items-center justify-start overflow-scroll px-48 py-24 space-y-16">
+  <div class="w-fit flex flex-col items-start justify-evenly space-y-8">
+    <h1 class="text-stone-700/40 text-4xl font-bold capitalize">API details</h1>
+    <div class="w-full flex flex-col space-y-4">
+      <div class="w-full flex flex-col items-start justify-start space-y-4">
+        <h4 class="flex flex-col items-start">
+          <span class="capitalize font-bold">Publishable Key</span>
+          <span class="font-normal text-xs text-stone-500">Can be publicly-accessible in your web or mobile app’s client-side code.</span>
+        </h4>
+        <textarea
+          class="w-[640px] h-fit px-2 py-1 border border-stone-300 hover:border-stone-400 bg-stone-50 cursor-pointer rounded-lg"
+          on:click="{(e) => {
+            e.preventDefault();
+            navigator.clipboard
+              .writeText(`${data?.apiKey}`)
+              .then(() => alert('API Key copied to Clipboard.'))
+              .catch(() => alert('Unable to copy, provide permissions.'));
+          }}"
+          name="apiKey"
+          value="{data?.apiKey}"
+          placeholder="your api key"
+          rows="3"
+          readonly></textarea>
+      </div>
+      <div class="w-full flex flex-col items-start justify-start space-y-4">
+        <h4 class="flex flex-col items-start">
+          <span class="capitalize w-full font-bold ">Secret Key</span>
+          <span class="w-fit font-normal text-xs text-stone-500">
+            Must be secret and stored securely in your web or mobile app’s server-side code (such as in an environment variable or credential management system). After you generate it, store it, before it disappears (when you refresh your
+            page).
+          </span>
+        </h4>
+        <textarea
+          class="w-[640px] h-fit px-2 py-1 border border-stone-300 hover:border-stone-400 bg-stone-50 cursor-pointer rounded-lg"
+          on:click="{(e) => {
+            e.preventDefault();
+            navigator.clipboard
+              .writeText(`${$secretKey}`)
+              .then(() => alert('Secret Key copied to Clipboard.'))
+              .catch(() => alert('Unable to copy, provide permissions.'));
+          }}"
+          name="secretKey"
+          value="{$secretKey}"
+          placeholder="your secret key"
+          rows="3"
+          readonly></textarea>
+        <button class="bg-stone-50 font-semibold border border-stone-300 hover:border-stone-400 px-2 py-1 text-center rounded-lg" on:click="{generateSecret}"> Generate Secret </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="w-fit flex flex-col items-start justify-evenly space-y-8">
     <h1 class="text-stone-700/40 text-4xl font-bold capitalize">account details</h1>
-    <div class="w-full flex flex-col space-y-2">
+    <div class="w-full flex flex-col space-y-4">
       <div class="w-full grid grid-rows-2 items-center justify-start">
         <h4 class="capitalize font-bold">customer id</h4>
         <input class="w-[640px] px-2 py-1 border border-stone-300 hover:border-stone-400 bg-stone-50 cursor-pointer rounded-lg" name="customerId" value="{data.customerId}" readonly />
@@ -78,9 +142,10 @@ const saveData = () => {
       </div>
     </div>
   </div>
-  <div class="w-fit flex flex-col items-start justify-evenly space-y-2">
+
+  <div class="w-fit flex flex-col items-start justify-evenly space-y-8">
     <h1 class="text-stone-700/40 text-4xl font-bold capitalize">contact details</h1>
-    <div class="w-full flex flex-col space-y-2">
+    <div class="w-full flex flex-col space-y-4">
       <div class="w-full grid grid-rows-2 items-center justify-start">
         <h4 class="capitalize font-bold">name</h4>
         <input class="w-[640px] px-2 py-1 border border-stone-300 hover:border-stone-400 bg-stone-50 cursor-pointer rounded-lg" on:change="{handleChange}" name="displayName" value="{data.displayName}" placeholder="your name" />
@@ -95,13 +160,7 @@ const saveData = () => {
       </div>
     </div>
   </div>
-  <div class="w-fit flex flex-col items-start justify-evenly space-y-2">
-    <h1 class="text-stone-700/40 text-4xl font-bold capitalize">API details</h1>
-    <div class="w-full grid grid-rows-2 items-center justify-start">
-      <h4 class="capitalize font-bold">client ID</h4>
-      <input class="w-[640px] px-2 py-1 border border-stone-300 hover:border-stone-400 bg-stone-50 cursor-pointer rounded-lg" on:change="{handleChange}" name="apiKey" value="{data?.apiKey}" placeholder="your api key" readonly />
-    </div>
-  </div>
+
   {#if $somethingChanged}
     <button class="bg-red-500 text-white font-semibold px-5 py-2 text-center rounded-md shadow-md hover:shadow-2xl absolute w-32 bottom-20 right-20" on:click="{saveData}"> Save </button>
   {/if}

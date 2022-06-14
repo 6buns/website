@@ -32,7 +32,7 @@ let current = { key: "games", component: Games },
     { key: "customer service", component: Service },
   ],
   SfuMerits = ["Simple Weekly Pricing", "Three line Integration", "Unlimited users in a rooms", "No limit on programatic room creation", "Get Realtime Statistics"],
-  WebrtcMerits = ["Simple Weekly Pricing", "Three line Integration", "4 users in video, and 8 users in audio room", "No limit on programatic room creation", "Get Realtime Statistics"],
+  WebrtcMerits = ["Weekly Pricing", "Three line Integration", "Max 4 users in video, and 8 users in audio room", "No limit on programatic room creation", "Get Realtime Statistics"],
   enlarged = false;
 const wordArray = ["video", "audio", "data"];
 let index = 0;
@@ -58,24 +58,23 @@ onDestroy(() => {
 });
 </script>
 
-<main>
+<main class="bg-green-50">
   <Menu />
-  <div class="text-skin-base focus:outline-none h-full w-full flex flex-col space-y-32 items-center justify-start mb-8 px-4 md:px-16">
+  <div class="text-skin-base focus:outline-none h-full w-full flex flex-col space-y-16 items-center justify-start mb-8 px-4 md:px-16">
     <section id="main" class="my-8 flex flex-col lg:flex-row items-stretch justify-center">
-      <div class="w-full lg:flex-grow-0 flex-grow grid auto-rows-max gap-8 lg:gap-4 lg:mr-4 lg:pr-16 items-stretch justify-around justify-items-stretch text-left">
+      <div class="w-full lg:flex-grow-0 flex-grow grid auto-rows-max gap-8 lg:gap-4 lg:mr-4 lg:mt-8 lg:pr-16 items-stretch justify-around justify-items-stretch text-left">
         <h1 class="row-span-1 text-4xl sm:text-6xl leading-tight font-serif font-extrabold text-gray-900">
-          <span class="block">
-            Scalable peer to peer
+          <span class="block">Go Realtime now.</span>
+          <span class="block text-xl sm:text-2xl">
+            Add live
             {#each wordArray as word, i}
               {#if i === index}
                 {word}
               {/if}
-            {/each}
-            api</span>
+            {/each} to your app, with a single api.
+          </span>
         </h1>
-        <p class="row-span-1 lg:pr-4 text-lg font-normal tracking-tight text-stone-500 mx-auto">
-          A product that makes creating and managing WebRTC connections simpler. With just few lines of code, your webrtc connection is up and running.
-        </p>
+        <p class="row-span-1 lg:pr-4 text-lg font-normal tracking-tight text-stone-500 mx-auto">Add realtime capabilities to your product using a single api. With just few lines of code, your webrtc connection is up and running.</p>
         <div on:click="{setLoginForm}" class="row-span-1 mt-8 flex lg:flex-row flex-col space-y-4 lg:space-y-0 justify-start">
           <div class="rounded-md shadow">
             <button href="/" class="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 md:py-4 md:text-lg md:px-10"> Get started </button>
@@ -85,10 +84,10 @@ onDestroy(() => {
           </div>
         </div>
       </div>
-      <div class="relative w-full flex-grow h-full items-center justify-items-end flex flex-col my-4 sm:my-0 sm:mb-4">
+      <div class="relative w-full flex-grow h-full items-center justify-items-end flex flex-col my-4 lg:-mt-8 sm:my-0 sm:mb-4">
         <svg class="w-full" viewBox="0 0 640 448" xmlns="http://www.w3.org/2000/svg">
-          <foreignObject class="rounded-2xl shadow-lg" x="32" y="32" width="576" height="384">
-            <div class="relative w-[36rem] h-[24rem] overflow-hidden flex flex-col items-stretch p-2 bg-stone-50 border-collapse">
+          <foreignObject class="rounded-3xl shadow-lg outline outline-4 outline-stone-300" x="32" y="32" width="576" height="384">
+            <div class="relative w-[36rem] h-[24rem] overflow-hidden flex flex-col items-stretch p-2 bg-stone-50">
               <svelte:component this="{current.component}" />
             </div>
           </foreignObject>
@@ -109,8 +108,8 @@ onDestroy(() => {
       </div>
     </section>
 
-    <section id="products" class="my-auto flex flex-col items-center justify-center">
-      <h1 class="mb-6 text-8xl text-stone-700/30 font-serif font-bold">Product</h1>
+    <section id="products" class="my-8 flex flex-col items-center justify-center">
+      <h1 class="mb-12 text-8xl text-stone-700/30 font-serif font-bold">Product</h1>
       <div class="w-full grid grid-rows-1 space-y-12 items-stretch justify-center justify-items-center content-center">
         <div class="w-full grid grid-cols-1 grid-rows-2 md:grid-rows-1 md:grid-cols-2 gap-8 items-center justify-items-center ">
           <div
@@ -124,7 +123,7 @@ onDestroy(() => {
           </div>
           <div class="px-0 md:px-12 w-full md:w-[484px] order-1 md:order-2">
             <h1 class="text-2xl font-serif font-bold">Scalable Peer</h1>
-            <p class="w-full pr-4 py-2">Simple integration to achieve a webrtc peer connection. Get started with our api, and add live video chat or audio chat feature to your application.</p>
+            <p class="w-full pr-4 py-2">Simple integration to achieve a webrtc peer connection. Get started with our api, and add one-on-one live video chat or audio chat feature to your application.</p>
             <ul class="flex flex-col space-y-2">
               {#each WebrtcMerits as merit}
                 <li class="w-fit flex flex-row items-center space-x-2 bg-stone-50 shadow-sm rounded-md p-2">

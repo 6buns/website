@@ -1,23 +1,27 @@
-<div>
+<div class="w-full h-full flex flex-col items-center justify-between">
   <div class="grid grid-cols-2 gap-4 items-center justify-items-center ">
-    <div class="w-full h-full bg-stripes-stone text-stone-500 flex flex-col items-center justify-center rounded-2xl overflow-hidden">
-      <div class="w-64 h-[19rem] flex flex-col justify-center items-center ">
+    <div class="relative w-full h-[19rem] bg-stripes-stone text-stone-500 flex flex-col items-center justify-center rounded-2xl overflow-hidden">
+      <!-- <div class="w-64 h-[19rem] flex flex-col justify-center items-center ">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24" viewBox="0 0 20 20" fill="currentColor">
           <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"></path>
         </svg>
         <h1 class="text-center">You</h1>
-      </div>
+      </div> -->
+      <h1 class="text-center font-bold absolute bottom-0 right-0 left-0 text-white z-30" style="text-shadow: 1px 2px 2px #00000040;">Doctor</h1>
+      <video class="object-cover h-full" src="./videos/doctor.mp4" autoplay loop muted></video>
     </div>
-    <div class="w-full h-full bg-stripes-red text-red-500 flex flex-col items-center justify-center rounded-2xl overflow-hidden">
-      <div class="w-64 h-[19rem] flex flex-col justify-center items-center ">
+    <div class="relative w-full h-[19rem] bg-stripes-red text-red-500 flex flex-col items-center justify-center rounded-2xl overflow-hidden">
+      <!-- <div class="w-64 h-[19rem] flex flex-col justify-center items-center ">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24" viewBox="0 0 20 20" fill="currentColor">
           <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"></path>
         </svg>
         <h1 class="text-center  font-bold">Doctor</h1>
-      </div>
+      </div> -->
+      <h1 class="text-center font-bold absolute bottom-0 right-0 left-0 text-white z-30" style="text-shadow: 1px 2px 2px #00000040;">You</h1>
+      <video class="object-cover h-full" src="./videos/jim_parson.mp4" autoplay loop muted></video>
     </div>
   </div>
-  <div class="w-min flex flex-row items-center justify-evenly space-x-12 m-auto mt-2 text-stone-400">
+  <div class="w-min flex flex-row items-center justify-evenly space-x-12 text-stone-400">
     <div class="w-max flex flex-col items-center justify-center rounded-md px-4 hover:bg-stone-200 cursor-pointer py-1">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
         <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd"></path>

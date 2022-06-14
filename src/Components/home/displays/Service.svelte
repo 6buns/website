@@ -1,6 +1,6 @@
-<div>
-  <div class="grid grid-cols-2 gap-4 items-center justify-items-center cursor-pointer">
-    <div title="Bill of Sale" class="row-span-2 shadow hover:shadow-lg bg-white w-full h-full flex flex-col items-center justify-center rounded-2xl overflow-hidden">
+<div class="w-full h-full flex flex-col items-center justify-between">
+  <div class="w-full h-full flex flex-row space-x-4 items-center justify-between cursor-pointer">
+    <div title="Bill of Sale" class="flex-grow shadow hover:shadow-lg bg-white w-full h-full flex flex-col items-center justify-center rounded-2xl overflow-hidden">
       <div class="text-xs font-mono flex flex-col items-center justify-evenly px-4">
         <h1 class="font-bold">Castle Resturant</h1>
         <h3 class="w-3/5 text-center">Q-24, Oberoi Mall, Gorgaon East, Mumbai - 400065</h3>
@@ -48,20 +48,25 @@
         </table>
       </div>
     </div>
-    <div title="You are having video chat to resolve the dispute." class="w-full h-full bg-stripes-stone text-stone-500 flex flex-col items-center justify-center rounded-2xl overflow-hidden">
-      <div class="w-24 h-36 flex flex-col justify-center items-center ">
+    <div class="h-full flex flex-col items-stretch justify-evenly gap-4">
+      <div title="You are having video chat to resolve the dispute." class="relative w-36 h-36 bg-stripes-stone text-stone-500 flex flex-col items-center justify-center rounded-2xl overflow-hidden">
+        <!-- <div class="w-24 h-36 flex flex-col justify-center items-center ">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24" viewBox="0 0 20 20" fill="currentColor">
           <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"></path>
         </svg>
         <h1 class="text-center">You</h1>
+      </div> -->
+        <h1 class="text-center font-bold absolute bottom-0 right-0 left-0 text-white z-30" style="text-shadow: 1px 2px 2px #00000040;">You</h1>
+        <video class="object-cover h-full w-full scale-[1.34] m-0" src="./videos/user_1.mp4" autoplay loop muted></video>
       </div>
-    </div>
-    <div title="Your Customer who has raised the dispute." class="w-full h-full bg-stripes-blue text-blue-500 flex flex-col items-center justify-center rounded-2xl overflow-hidden">
-      <div class="w-24 h-36 flex flex-col justify-center items-center ">
+      <div title="Your Customer who has raised the dispute." class="relative w-36 h-36 bg-stripes-blue text-blue-500 flex flex-col items-center justify-center rounded-2xl overflow-hidden">
+        <!-- <div class="w-24 h-36 flex flex-col justify-center items-center ">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24" viewBox="0 0 20 20" fill="currentColor">
           <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"></path>
         </svg>
-        <h1 class="text-center  font-bold">Customer</h1>
+      </div> -->
+        <h1 class="text-center font-bold absolute bottom-0 right-0 left-0 text-white z-30" style="text-shadow: 1px 2px 2px #00000040;">Customer</h1>
+        <video class="object-cover h-full w-full scale-[1.34] m-0" src="./videos/user_2.mp4" autoplay loop muted></video>
       </div>
     </div>
   </div>

@@ -1,4 +1,5 @@
 import { readable } from "svelte/store";
+// import { siteAssetsRef } from "../firebase";
 
 export const FUNCTIONS_URL = readable(null, (set) => {
   if (!isProduction) {
@@ -10,3 +11,10 @@ export const FUNCTIONS_URL = readable(null, (set) => {
   }
   return () => { };
 })
+
+
+// export const site_assets = readable(null, (set) => {
+//   const list = ['chessboard.png', '']
+//   const siteAssetsRef = ref(storage, "site_assets/");
+
+// })

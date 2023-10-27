@@ -44,6 +44,7 @@ const services = {
             case 'github':
                 return loginWithGithub();
             case 'google':
+                console.log(event)
                 return loginWithGoogle();
             default:
                 break;

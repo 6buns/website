@@ -22,6 +22,7 @@ export const db = getFirestore(app);
 
 export const storage = getStorage(app);
 
+
 if (!isProduction) {
   connectFirestoreEmulator(db, 'localhost', 8080);
   connectAuthEmulator(auth, "http://localhost:9099");

@@ -9,5 +9,9 @@ service cloud.firestore {
     match /keyStore/{key_hash} {
     	allow read, write: if request.auth != null && resource.data.user_id == request.auth.uid
     }
+
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
   }
 }

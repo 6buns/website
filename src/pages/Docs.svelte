@@ -64,7 +64,7 @@ import OmegleClone from "../../Docs/Scalable_Peer/omegleClone.svx";
     </div>
     <main class="lg:pl-[19.5rem]">
       <div class="max-w-3xl mx-auto pt-10 xl:max-w-none xl:ml-0 xl:mr-[15.5rem] xl:pr-16">
-        <div class="relative z-20 pb-10 prose prose-stone dark:prose-dark">
+        <div class="relative z-20 pb-10 prose dark:prose-dark">
           <Route path="/" component="{GettingStarted}" />
           <Route path="/setup" component="{Setup}" />
           <Route path="/events" component="{Events}" />

@@ -7,9 +7,6 @@
 #leftCurve {
   stroke-dasharray: 10;
 }
-#textBox {
-  box-shadow: inset 0px 0px 2px 6px white;
-}
 </style>
 
 <script>
@@ -31,7 +28,7 @@ const opa = tweened(0, {
 });
 
 const texts = {
-  userLive: "You, and otherUser are live to create a Peer Connection",
+  userLive: "You, and otherUser are ready to create a WebRTC Connection",
   user1Server: "You send credentials to otherUser through signal server",
   user2Server: "otherUser sends credentials to You through signal server",
   user1User2Connect: "You are connected to otherUser using WebRTC",

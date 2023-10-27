@@ -1,7 +1,28 @@
-<div class="flex flex-row items-center justify-items-start ">
-  <img class="w-[22rem] object-scale-down object-center" id="chessboard" src="/chessboard.png" alt="Chessboard" />
+<script>
+import { getDownloadURL, ref } from "firebase/storage";
+import { onMount } from "svelte";
+import { storage } from "../../../../firebase";
 
-  <div class="ml-4 w-full h-full flex flex-col items-center justify-items-center space-y-4">
+const chessboardRef = ref(storage, "site_assets/chessboard.png");
+let chessboard;
+
+onMount(() => {
+  getDownloadURL(chessboardRef)
+    .then((url) => {
+      chessboard = url;
+    })
+    .catch((err) => console.error(err));
+});
+</script>
+
+<div class="flex flex-row items-center justify-items-start ">
+  {#if !chessboard}
+    <div class="w-[352px] h-[352px] rounded-2xl bg-stone-200 animate-pulse"></div>
+  {:else}
+    <img class="w-[22rem] object-scale-down object-center" id="chessboard" src="{chessboard}" alt="Chessboard" />
+  {/if}
+
+  <div class="ml-4 max-w-[224px] w-full h-full flex flex-col items-center justify-items-center space-y-4">
     <div class="relative w-full h-full bg-stripes-red text-red-500 flex flex-col items-center justify-center rounded-2xl overflow-hidden">
       <!-- <div class="w-36 h-36 flex flex-col justify-center items-center ">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-16 sm:h-24 w-16 sm:w-24" viewBox="0 0 20 20" fill="currentColor">

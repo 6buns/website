@@ -21,7 +21,7 @@ import Teaching from "../Components/home/displays/Teaching.svelte";
 import Games from "../Components/home/displays/Games.svelte";
 import Medical from "../Components/home/displays/Medical.svelte";
 import Service from "../Components/home/displays/Service.svelte";
-import { onDestroy } from "svelte";
+import { onDestroy, onMount } from "svelte";
 import PeerConnectionAnimation from "../Components/PeerConnectionAnimation.svelte";
 import { setLoginForm } from "../Components/Login.svelte";
 let current = { key: "games", component: Games },
@@ -32,7 +32,7 @@ let current = { key: "games", component: Games },
     { key: "customer service", component: Service },
   ],
   SfuMerits = ["Simple Weekly Pricing", "Three line Integration", "Unlimited users in a rooms", "No limit on programatic room creation", "Get Realtime Statistics"],
-  WebrtcMerits = ["Weekly Pricing", "Three line Integration", "Max 4 users in video, and 8 users in audio room", "No limit on programatic room creation", "Get Realtime Statistics"],
+  WebrtcMerits = ["Weekly Pricing", "Three line Integration", "Can handle upto 4 users in video, and 8 users in audio room", "No limit on programatic room creation", "Get Realtime Statistics"],
   enlarged = false;
 const wordArray = ["video", "audio", "data"];
 let index = 0;
@@ -47,34 +47,31 @@ const nn = (n) => {
   return Number.isNaN(n) ? (Number.isSafeInteger(parseFloat(n)) ? parseInt(n) : parseFloat(parseFloat(n).toFixed(2))) : Number.isSafeInteger(n) ? parseInt(n) : parseFloat(parseFloat(n).toFixed(2));
 };
 
-const closeInterval = setInterval(() => {
-  const i = currentArray.findIndex((c) => current.key === c.key);
-  current = i >= currentArray.length - 1 ? currentArray[0] : currentArray[i + 1];
-  index = ~~(Math.random() * 3);
-}, 5000);
+onMount(() => {});
+
+// const closeInterval = setInterval(() => {
+//   const i = currentArray.findIndex((c) => current.key === c.key);
+//   current = i >= currentArray.length - 1 ? currentArray[0] : currentArray[i + 1];
+//   index = ~~(Math.random() * 3);
+// }, 5000);
 
 onDestroy(() => {
-  clearInterval(closeInterval);
+  // clearInterval(closeInterval);
 });
 </script>
 
-<main class="bg-green-50">
+<main>
   <Menu />
   <div class="text-skin-base focus:outline-none h-full w-full flex flex-col space-y-16 items-center justify-start mb-8 px-4 md:px-16">
     <section id="main" class="my-8 flex flex-col lg:flex-row items-stretch justify-center">
-      <div class="w-full lg:flex-grow-0 flex-grow grid auto-rows-max gap-8 lg:gap-4 lg:mr-4 lg:mt-8 lg:pr-16 items-stretch justify-around justify-items-stretch text-left">
-        <h1 class="row-span-1 text-4xl sm:text-6xl leading-tight font-serif font-extrabold text-gray-900">
-          <span class="block">Go Realtime now.</span>
-          <span class="block text-xl sm:text-2xl">
-            Add live
-            {#each wordArray as word, i}
-              {#if i === index}
-                {word}
-              {/if}
-            {/each} to your app, with a single api.
-          </span>
+      <div class="w-full lg:flex-grow-0 flex-grow grid auto-rows-max gap-8 lg:gap-4 lg:mr-4 lg:pr-16 items-stretch justify-around justify-items-stretch text-left">
+        <h1 class="row-span-1 text-4xl sm:text-8xl font-serif font-extrabold leading-[1] text-stone-700">
+          <span class="block"><span class="text-green-500">WebRTC</span> api</span>
+          <span class="block">for your app.</span>
         </h1>
-        <p class="row-span-1 lg:pr-4 text-lg font-normal tracking-tight text-stone-500 mx-auto">Add realtime capabilities to your product using a single api. With just few lines of code, your webrtc connection is up and running.</p>
+        <p class="row-span-1 lg:pr-4 text-2xl font-normal text-stone-500 mx-auto">
+          Add realtime capabilities to your product using a single api. With just few lines of code, your webrtc connection is up and running. WebRTC supports live video, audio, and data transfer. Supports upto 4 users in a live session.
+        </p>
         <div on:click="{setLoginForm}" class="row-span-1 mt-8 flex lg:flex-row flex-col space-y-4 lg:space-y-0 justify-start">
           <div class="rounded-md shadow">
             <button href="/" class="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 md:py-4 md:text-lg md:px-10"> Get started </button>
@@ -110,7 +107,7 @@ onDestroy(() => {
 
     <section id="products" class="my-8 flex flex-col items-center justify-center">
       <h1 class="mb-12 text-8xl text-stone-700/30 font-serif font-bold">Product</h1>
-      <div class="w-full grid grid-rows-1 space-y-12 items-stretch justify-center justify-items-center content-center">
+      <div class="mb-12 w-full grid grid-rows-1 space-y-12 items-stretch justify-center justify-items-center content-center">
         <div class="w-full grid grid-cols-1 grid-rows-2 md:grid-rows-1 md:grid-cols-2 gap-8 items-center justify-items-center ">
           <div
             class="w-full cursor-pointer flex items-center justify-center order-2 md:order-1"
@@ -122,18 +119,22 @@ onDestroy(() => {
             <PeerConnectionAnimation />
           </div>
           <div class="px-0 md:px-12 w-full md:w-[484px] order-1 md:order-2">
-            <h1 class="text-2xl font-serif font-bold">Scalable Peer</h1>
-            <p class="w-full pr-4 py-2">Simple integration to achieve a webrtc peer connection. Get started with our api, and add one-on-one live video chat or audio chat feature to your application.</p>
-            <ul class="flex flex-col space-y-2">
+            <h1 class="text-2xl font-serif font-bold">Peer-to-Peer API</h1>
+            <p class="w-full pr-4 py-2">API for handling multiple WebRTC peer-to-peer connections, in a session.</p>
+            <ul class="flex flex-col">
               {#each WebrtcMerits as merit}
-                <li class="w-fit flex flex-row items-center space-x-2 bg-stone-50 shadow-sm rounded-md p-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 fill-green-900" viewBox="0 0 20 20">
+                <li class="flex flex-row items-start py-1 px-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 m-1 mr-2 flex-shrink-0 fill-green-900" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
                   </svg>
-                  <p>{merit}</p>
+                  <p class=" break-words">{merit}</p>
                 </li>
               {/each}
             </ul>
+            <p class="mt-2 text-sm text-gray-400">
+              E.g, a meeting session requires 4 users, for every user this api will create a peer to peer connection to the other 3 users, so in total, it will handle 12 connections for an audio only session, and 24 connections for audio
+              and video session, and 36 connections for if the session has audio, video, and data transfer.
+            </p>
           </div>
         </div>
       </div>

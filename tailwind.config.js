@@ -58,6 +58,16 @@ module.exports = {
           '50%': { transform: 'translateX(0)' },
         }
       },
+      typography: {
+        DEFAULT: {
+          css: {
+            'pre code': {
+              'font-weight': '600',
+              'font-size': 'medium',
+            }
+          }
+        }
+      }
     },
   },
   plugins: [require("@tailwindcss/forms"), require('@tailwindcss/typography'),],

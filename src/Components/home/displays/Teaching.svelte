@@ -1,47 +1,57 @@
+<script>
+import { getDownloadURL, ref } from "firebase/storage";
+import { onMount } from "svelte";
+import { storage } from "../../../../firebase";
+
+const VideosRef = ref(storage, "site_assets/videos/");
+let video_1, video_2, video_3, video_4;
+
+onMount(() => {
+  getDownloadURL(ref(VideosRef, "stephen_colbert.mp4"))
+    .then((url) => {
+      video_1 = url;
+    })
+    .catch((err) => console.log(err));
+
+  getDownloadURL(ref(VideosRef, "guest_1.mp4"))
+    .then((url) => {
+      video_2 = url;
+    })
+    .catch((err) => console.log(err));
+
+  getDownloadURL(ref(VideosRef, "guest_2.mp4"))
+    .then((url) => {
+      video_3 = url;
+    })
+    .catch((err) => console.log(err));
+  getDownloadURL(ref(VideosRef, "guest_3.mp4"))
+    .then((url) => {
+      video_4 = url;
+    })
+    .catch((err) => console.log(err));
+});
+</script>
+
 <div>
-  <div class="grid grid-cols-2 gap-4 items-center justify-items-center ">
+  <div class="grid grid-cols-2 gap-4 items-center justify-items-center">
     <div class="relative w-full h-36 bg-stripes-stone text-stone-500 flex flex-col items-center justify-center rounded-2xl shadow-lg overflow-hidden">
-      <!-- <div class="w-36 h-36 flex flex-col justify-center items-center ">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"></path>
-        </svg>
-        <h1 class="text-center">You</h1>
-      </div> -->
       <h1 class="text-center font-bold absolute bottom-0 right-0 left-0 text-white z-30" style="text-shadow: 1px 2px 2px #00000040;">You</h1>
-      <video class="object-cover h-full w-full scale-[1.4] m-[2%_0_0_-25%]" src="./videos/stephen_colbert.mp4" autoplay loop muted></video>
+      <video class="object-cover h-full w-full scale-[1.4] m-[2%_0_0_-25%]" src="{video_1}" autoplay loop muted data-sveltekit-preload-data></video>
     </div>
     <div class="relative w-full h-36 bg-stripes-red text-red-500 flex flex-col items-center justify-center rounded-2xl shadow-lg overflow-hidden">
-      <!-- <div class="w-36 h-36 flex flex-col justify-center items-center ">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"></path>
-        </svg>
-        <h1 class="text-center  font-bold">Kerry</h1>
-      </div> -->
       <h1 class="text-center font-bold absolute bottom-0 right-0 left-0 text-white z-30" style="text-shadow: 1px 2px 2px #00000040;">West</h1>
-      <video class="object-cover h-full w-full scale-[1.75] m-[-5%_0_0_-40%]" src="./videos/guest_1.mp4" autoplay loop muted></video>
+      <video class="object-cover h-full w-full scale-[1.75] m-[-5%_0_0_-40%]" src="{video_2}" autoplay loop muted data-sveltekit-preload-data></video>
     </div>
     <div class="relative w-full h-36 bg-stripes-yellow text-yellow-500 flex flex-col items-center justify-center rounded-2xl shadow-lg overflow-hidden">
-      <!-- <div class="w-36 h-36 flex flex-col justify-center items-center ">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"></path>
-        </svg>
-        <h1 class="text-center font-bold">West</h1>
-      </div> -->
       <h1 class="text-center font-bold absolute bottom-0 right-0 left-0 text-white z-30" style="text-shadow: 1px 2px 2px #00000040;">Kerry</h1>
       <div class="w-full h-full bg-black">
-        <video class="object-cover h-full w-full scale-[1.1] m-[0_0_0_-18%]" src="./videos/guest_2.mp4" autoplay loop muted></video>
+        <video class="object-cover h-full w-full scale-[1.1] m-[0_0_0_-18%]" src="{video_3}" autoplay loop muted data-sveltekit-preload-data></video>
       </div>
     </div>
     <div class="relative w-full h-36 bg-stripes-blue text-blue-500 flex flex-col items-center justify-center rounded-2xl shadow-lg overflow-hidden">
-      <!-- <div class="w-36 h-36 flex flex-col justify-center items-center ">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"></path>
-        </svg>
-        <h1 class="text-center  font-bold">Olson</h1>
-      </div> -->
       <h1 class="text-center font-bold absolute bottom-0 right-0 left-0 text-white z-30" style="text-shadow: 1px 2px 2px #00000040;">Olson</h1>
       <div class="w-full h-full bg-black">
-        <video class="object-cover h-full w-full scale-[1.15] m-[0_0_0_-15%]" src="./videos/guest_3.mp4" autoplay loop muted></video>
+        <video class="object-cover h-full w-full scale-[1.15] m-[0_0_0_-15%]" src="{video_4}" autoplay loop muted data-sveltekit-preload-data></video>
       </div>
     </div>
   </div>

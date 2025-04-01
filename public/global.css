@@ -1309,6 +1309,9 @@ select {
 .min-h-full {
   min-height: 100%;
 }
+.min-h-\[40px\] {
+  min-height: 40px;
+}
 .w-screen {
   width: 100vw;
 }
@@ -1738,6 +1741,11 @@ select {
   margin-right: calc(-1rem * var(--tw-space-x-reverse));
   margin-left: calc(-1rem * calc(1 - var(--tw-space-x-reverse)));
 }
+.space-x-0 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-x-reverse: 0;
+  margin-right: calc(0px * var(--tw-space-x-reverse));
+  margin-left: calc(0px * calc(1 - var(--tw-space-x-reverse)));
+}
 .self-start {
   align-self: flex-start;
 }
@@ -2053,6 +2061,10 @@ select {
   padding-left: 9rem;
   padding-right: 9rem;
 }
+.py-0 {
+  padding-top: 0px;
+  padding-bottom: 0px;
+}
 .pt-\[4px\] {
   padding-top: 4px;
 }
@@ -2104,6 +2116,9 @@ select {
 .pl-3 {
   padding-left: 0.75rem;
 }
+.pb-2 {
+  padding-bottom: 0.5rem;
+}
 .text-left {
   text-align: left;
 }
@@ -2112,6 +2127,9 @@ select {
 }
 .text-right {
   text-align: right;
+}
+.align-text-bottom {
+  vertical-align: text-bottom;
 }
 .font-serif {
   font-family: 'DM Serif Display', serif;

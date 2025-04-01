@@ -1,3 +1,26 @@
+<script>
+import { getDownloadURL, ref } from "firebase/storage";
+import { onMount } from "svelte";
+import { storage } from "../../../../firebase";
+
+const VideosRef = ref(storage, "site_assets/videos/");
+let video_1, video_2;
+
+onMount(() => {
+  getDownloadURL(ref(VideosRef, "/doctor.mp4"))
+    .then((url) => {
+      video_1 = url;
+    })
+    .catch((err) => console.log(err));
+
+  getDownloadURL(ref(VideosRef, "/jim_parson.mp4"))
+    .then((url) => {
+      video_2 = url;
+    })
+    .catch((err) => console.log(err));
+});
+</script>
+
 <div class="w-full h-full flex flex-col items-center justify-between">
   <div class="grid grid-cols-2 gap-4 items-center justify-items-center ">
     <div class="relative w-full h-[19rem] bg-stripes-stone text-stone-500 flex flex-col items-center justify-center rounded-2xl overflow-hidden">
@@ -8,7 +31,7 @@
         <h1 class="text-center">You</h1>
       </div> -->
       <h1 class="text-center font-bold absolute bottom-0 right-0 left-0 text-white z-30" style="text-shadow: 1px 2px 2px #00000040;">Doctor</h1>
-      <video class="object-cover h-full" src="./videos/doctor.mp4" autoplay loop muted></video>
+      <video class="object-cover h-full" src="{video_1}" autoplay loop muted data-sveltekit-preload-data></video>
     </div>
     <div class="relative w-full h-[19rem] bg-stripes-red text-red-500 flex flex-col items-center justify-center rounded-2xl overflow-hidden">
       <!-- <div class="w-64 h-[19rem] flex flex-col justify-center items-center ">
@@ -18,7 +41,7 @@
         <h1 class="text-center  font-bold">Doctor</h1>
       </div> -->
       <h1 class="text-center font-bold absolute bottom-0 right-0 left-0 text-white z-30" style="text-shadow: 1px 2px 2px #00000040;">You</h1>
-      <video class="object-cover h-full" src="./videos/jim_parson.mp4" autoplay loop muted></video>
+      <video class="object-cover h-full" src="{video_2}" autoplay loop muted data-sveltekit-preload-data></video>
     </div>
   </div>
   <div class="w-min flex flex-row items-center justify-evenly space-x-12 text-stone-400">

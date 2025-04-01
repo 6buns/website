@@ -1,3 +1,26 @@
+<script>
+import { getDownloadURL, ref } from "firebase/storage";
+import { onMount } from "svelte";
+import { storage } from "../../../../firebase";
+
+const VideosRef = ref(storage, "site_assets/videos/");
+let video_1, video_2;
+
+onMount(() => {
+  getDownloadURL(ref(VideosRef, "user_1.mp4"))
+    .then((url) => {
+      video_1 = url;
+    })
+    .catch((err) => console.log(err));
+
+  getDownloadURL(ref(VideosRef, "/user_2.mp4"))
+    .then((url) => {
+      video_2 = url;
+    })
+    .catch((err) => console.log(err));
+});
+</script>
+
 <div class="w-full h-full flex flex-col items-center justify-between">
   <div class="w-full h-full flex flex-row space-x-4 items-center justify-between cursor-pointer">
     <div title="Bill of Sale" class="flex-grow shadow hover:shadow-lg bg-white w-full h-full flex flex-col items-center justify-center rounded-2xl overflow-hidden">
@@ -57,7 +80,7 @@
         <h1 class="text-center">You</h1>
       </div> -->
         <h1 class="text-center font-bold absolute bottom-0 right-0 left-0 text-white z-30" style="text-shadow: 1px 2px 2px #00000040;">You</h1>
-        <video class="object-cover h-full w-full scale-[1.34] m-0" src="./videos/user_1.mp4" autoplay loop muted></video>
+        <video class="object-cover h-full w-full scale-[1.34] m-0" src="{video_1}" autoplay loop muted></video>
       </div>
       <div title="Your Customer who has raised the dispute." class="relative w-36 h-36 bg-stripes-blue text-blue-500 flex flex-col items-center justify-center rounded-2xl overflow-hidden">
         <!-- <div class="w-24 h-36 flex flex-col justify-center items-center ">
@@ -66,7 +89,7 @@
         </svg>
       </div> -->
         <h1 class="text-center font-bold absolute bottom-0 right-0 left-0 text-white z-30" style="text-shadow: 1px 2px 2px #00000040;">Customer</h1>
-        <video class="object-cover h-full w-full scale-[1.34] m-0" src="./videos/user_2.mp4" autoplay loop muted></video>
+        <video class="object-cover h-full w-full scale-[1.34] m-0" src="{video_2}" autoplay loop muted></video>
       </div>
     </div>
   </div>

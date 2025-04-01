@@ -83,7 +83,7 @@ onDestroy(() => {
       </div>
       <div class="relative w-full flex-grow h-full items-center justify-items-end flex flex-col my-4 lg:-mt-8 sm:my-0 sm:mb-4">
         <svg class="w-full" viewBox="0 0 640 448" xmlns="http://www.w3.org/2000/svg">
-          <foreignObject class="rounded-3xl shadow-lg outline outline-4 outline-stone-300" x="32" y="32" width="576" height="384">
+          <foreignObject class="rounded-3xl shadow-lg outline outline-4 outline-stone-300" x="32" y="32" width="576" height="380">
             <div class="relative w-[36rem] h-[24rem] overflow-hidden flex flex-col items-stretch p-2 bg-stone-50">
               <svelte:component this="{current.component}" />
             </div>
